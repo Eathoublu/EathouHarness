@@ -49,7 +49,7 @@ tools:
 4. 生成 test_files.json
 5. Coding Agent 根据测试实现被测代码
 
-### TDD 示例
+### TDD 示例 - Python
 ```python
 class TestOrderService:
     def test_create_order_success(
@@ -71,6 +71,27 @@ class TestOrderService:
         assert result.order_id.startswith("ORD-")
         assert result.status == "created"
         assert result.user_id == user_id
+```
+
+### TDD 示例 - Java
+```java
+class OrderServiceTest {
+    @Test
+    void testCreateOrder_Success() {
+        // 输入
+        String userId = "U001";
+        List<OrderItemDto> items = List.of(new OrderItemDto("P001", 2));
+        BigDecimal totalAmount = new BigDecimal("199.98");
+        
+        // 执行
+        Order result = orderService.createOrder(userId, items, totalAmount);
+        
+        // 期望（驱动 Coding 实现）
+        assertTrue(result.getOrderId().startsWith("ORD-"));
+        assertEquals("created", result.getStatus());
+        assertEquals(userId, result.getUserId());
+    }
+}
 ```
 
 ### 状态更新
@@ -184,26 +205,48 @@ class TestOrderService:
 - 外部依赖必须 Mock（数据库、HTTP 调用、文件系统）
 - 测试数据使用 Factory 模式生成，禁止硬编码
 
-### 2. Mock 规范
+### 2. Mock 规范 - Python
 ```python
 # 正确：Mock 依赖注入点
 with patch('src.services.order_service.InventoryService') as mock_inv:
     mock_inv.check_stock.return_value = True
     
 # 错误：Mock 实现细节
-with patch('src.services.order_service.requests.get') as mock_req:
-    ...
 ```
 
-### 3. 测试命名规范
+### 2. Mock 规范 - Java
+```java
+// 正确：Mock 依赖注入点（使用 Mockito）
+@Mock
+private InventoryService inventoryService;
+
+@BeforeEach
+void setUp() {
+    when(inventoryService.checkStock(any(), anyInt())).thenReturn(true);
+}
+
+// 错误：Mock 实现细节
+```
+
+### 3. 测试命名规范 - Python
 - 函数：`test_{被测函数}_{场景}_{预期结果}`
 - 类：`Test{被测类}`
 - 文件：`test_{模块名}.py`
 
-### 4. 断言风格
+### 3. 测试命名规范 - Java
+- 函数：`test{被测方法}_{场景}_{预期结果}`
+- 类：`{被测类}Test`
+- 文件：`{被测类}Test.java`
+
+### 4. 断言风格 - Python
 - 使用 `pytest` 原生断言（非 unittest）
 - 异常断言使用 `pytest.raises`
 - 浮点数比较使用 `pytest.approx`
+
+### 4. 断言风格 - Java
+- 使用 `Assert.assertEquals`
+- 异常断言使用 `assertThrows`
+- 浮点数比较使用 `Assert.assertEquals` with delta
 
 ## 执行步骤
 

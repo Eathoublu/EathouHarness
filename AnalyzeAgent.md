@@ -122,32 +122,32 @@ tools:
 
 > TDD 原理：先写测试用例精确到类名、方法名、输入输出类型和参数顺序，再写实现代码
 
-- [ ] TASK-T-F001-01: 测试 OrderService.create_order() 正常流程
-  - 类: TestOrderService
-  - 方法: test_create_order_success(user_id: str, items: List[OrderItemCreate], total_amount: Decimal)
-  - 输入: user_id="U001", items=[OrderItemCreate(product_id="P001", quantity=2)], total_amount=Decimal("199.98")
-  - 期望: 返回 Order，order_id 格式 ORD-YYYYMMDD-XXXX，status="created"
+- [ ] TASK-T-F001-01: 测试 OrderService.createOrder() 正常流程
+  - 类: TestOrderService (Python) / OrderServiceTest (Java)
+  - 方法: test_create_order_success / testCreateOrderSuccess
+  - 输入: userId="U001", items=[OrderItemDto(productId="P001", quantity=2)], totalAmount=199.98
+  - 期望: 返回 Order，orderId 格式 ORD-YYYYMMDD-XXXX，status="created"
 
-- [ ] TASK-T-F001-02: 测试 OrderService.create_order() 库存不足
-  - 方法: test_create_order_insufficient_stock()
-  - Mock: InventoryService.check_stock(product_id="P001", quantity=2) → return False
-  - 期望: 抛 InsufficientStockError
+- [ ] TASK-T-F001-02: 测试 OrderService.createOrder() 库存不足
+  - 方法: test_create_order_insufficient_stock / testCreateOrderInsufficientStock
+  - Mock: InventoryService.checkStock(productId="P001", quantity=2) → false
+  - 期望: 抛 InsufficientStockException
 
-- [ ] TASK-T-F001-03: 测试 OrderService.create_order() 空 items
-  - 方法: test_create_order_empty_items()
+- [ ] TASK-T-F001-03: 测试 OrderService.createOrder() 空 items
+  - 方法: test_create_order_empty_items / testCreateOrderEmptyItems
   - 输入: items=[]
-  - 期望: 抛 ValidationError
+  - 期望: 抛 ValidationException
 
-- [ ] TASK-T-F001-04: 测试 Order.create() ORM 映射
-  - 类: TestOrderModel
-  - 方法: test_order_columns()
-  - 验证: id, user_id, status, total_amount, version, created_at, updated_at 字段映射
+- [ ] TASK-T-F001-04: 测试 Order Entity ORM 映射
+  - 类: TestOrderModel (Python) / OrderTest (Java)
+  - 方法: test_order_columns / testOrderColumns
+  - 验证: id, userId, status, totalAmount, version, createdAt, updatedAt
 
-- [ ] TASK-T-F001-05: 测试 OrderController.create_order() HTTP
-  - 类: TestOrderController
-  - 方法: test_create_order_returns_201()
-  - Mock: OrderService.create_order() → return OrderResponse
-  - 期望: status_code=201, response_body 包含 order_id
+- [ ] TASK-T-F001-05: 测试 OrderController.createOrder() HTTP
+  - 类: TestOrderController (Python) / OrderControllerTest (Java)
+  - 方法: test_create_order_returns_201 / testCreateOrderReturns201
+  - Mock: OrderService.createOrder() → OrderResponse
+  - 期望: HTTP 201, response body 包含 orderId
 ```
 
 ### 任务说明
@@ -169,9 +169,9 @@ tools:
 | 任务ID | 类/方法 | 说明 |
 |--------|--------|------|
 | TASK-C-F002-01 | OrderController.list_orders() | GET /api/v1/orders |
-| TASK-C-F002-02 | OrderService.list_by_user(user_id) | query.filter(user_id).order_by(desc(created_at)) |
+| TASK-C-F002-02 | OrderService.listByUser(userId) | query.filter(userId).orderBy(desc(createdAt)) |
 
-### 3. 数据模型 (models/order.py)
+### 3. 数据模型 (models/order.py) - Python 示例
 ```python
 class Order(Base):
     __tablename__ = "orders"
@@ -184,7 +184,7 @@ class Order(Base):
     updated_at = Column(DateTime)
 ```
 
-### 4. Schema (schemas/order_schema.py)
+### 4. Schema (schemas/order_schema.py) - Python 示例
 ```python
 class OrderCreate(BaseModel):
     items: List[OrderItemCreate]
@@ -195,6 +195,43 @@ class OrderResponse(BaseModel):
     status: str
     total_amount: Decimal
     created_at: datetime
+```
+
+### 3. 数据模型 (models/Order.java) - Java 示例
+```java
+@Entity
+@Table(name = "orders")
+public class Order {
+    @Id
+    private String id;  // 订单号
+    
+    @Column(name = "user_id")
+    private String userId;
+    
+    private String status;  // created
+    private BigDecimal totalAmount;
+    
+    @Version
+    private Integer version;  // 乐观锁
+    
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+```
+
+### 4. Schema (dto/OrderDto.java) - Java 示例
+```java
+public class OrderCreateRequest {
+    private List<OrderItemDto> items;
+    private BigDecimal totalAmount;
+}
+
+public class OrderResponse {
+    private String orderId;
+    private String status;
+    private BigDecimal totalAmount;
+    private LocalDateTime createdAt;
+}
 ```
 
 ## 验收标准

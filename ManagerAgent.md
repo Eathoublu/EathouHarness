@@ -214,91 +214,6 @@ TASK-T-F001-02 → TASK-C-F001-02
 3. 考虑添加订单超时自动取消机制
 ```
 
-## 执行逻辑
-
-### 1. 启动流程
-```python
-def start_project(user_requirement: str):
-    # 1. 创建项目目录结构
-    create_artifacts_structure()
-    
-    # 2. 写入初始状态
-    write_state({"current_state": "IDLE", "requirement": user_requirement})
-    
-    # 3. 触发 Initial Agent
-    trigger_agent("initial")
-    
-    # 4. 进入事件循环
-    run_event_loop()
-```
-
-### 2. 事件循环
-```python
-def run_event_loop():
-    while state not in [COMPLETED, FAILED]:
-        # 检查 Agent 完成信号
-        signals = check_completion_signals()
-        
-        for signal in signals:
-            handle_signal(signal)
-        
-        # 检查是否需要人工介入
-        if state == REVIEWING and not human_reviewed():
-            notify_human()
-            wait_for_human_input()
-        
-        # 异常检测
-        detect_anomalies()
-        
-        sleep(5)  # 轮询间隔
-```
-
-### 3. 状态流转处理
-```python
-def handle_signal(signal):
-    if signal.agent == "initial" and signal.type == "complete":
-        transition_to(ANALYZING)
-        trigger_agent("analyze")
-    
-    elif signal.agent == "analyze" and signal.type == "complete":
-        # Analyze 完成，直接触发 Coding 和 Test
-        transition_to(CODING)
-        trigger_agent("coding")
-        trigger_agent("test")
-    
-    elif signal.agent == "compile" and signal.type == "needs_fix":
-        if retry_counter["compile_fix"] < 5:
-            transition_to(FIXING)
-            trigger_agent("coding", mode="fix", feedback=signal.data)
-        else:
-            transition_to(FAILED)
-            alert_human("编译修复重试耗尽")
-    
-    # ... 其他状态处理
-```
-
-### 4. 协商仲裁
-当 Analyze Agent 和 Coding Agent 出现分歧：
-```python
-def arbitrate_negotiation(dispute):
-    """
-    仲裁策略：
-    1. 技术可行性优先：Coding Agent 对实现难度评估权重更高
-    2. 功能完整性优先：Analyze Agent 对业务需求理解权重更高
-    3. 风险规避：分歧较大时，选择保守方案并记录风险
-    """
-    if dispute.category == "技术难度":
-        weight = {"coding": 0.7, "analyze": 0.3}
-    elif dispute.category == "业务逻辑":
-        weight = {"coding": 0.3, "analyze": 0.7}
-    
-    decision = weighted_decision(dispute.options, weight)
-    
-    # 记录仲裁结果
-    log_arbitration(dispute, decision)
-    return decision
-```
-
 ## 人工介入点
 
 | 介入时机 | 触发条件 | 人工操作 | 默认行为 |
@@ -341,29 +256,6 @@ manager:
     on_completion: true
     on_failure: true
     webhook: "https://hooks.example.com/manager"
-```
-
-## 工具接口
-```python
-def trigger_agent(agent_name: str, **kwargs):
-    """触发指定 Agent 执行"""
-    pass
-
-def transition_to(new_state: State):
-    """状态流转，记录日志"""
-    pass
-
-def check_completion_signals() -> List[Signal]:
-    """检查文件系统中的完成信号"""
-    pass
-
-def notify_human(message: str, urgency: str = "normal"):
-    """通知人工介入"""
-    pass
-
-def detect_anomalies() -> List[Anomaly]:
-    """检测系统异常"""
-    pass
 ```
 
 ## 启动与终止
