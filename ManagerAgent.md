@@ -56,33 +56,63 @@ states:
   - IDLE           # 等待启动
   - INITIALIZING   # Initial Agent 运行中
   - ANALYZING      # Analyze Agent 运行中
-  - NEGOTIATING    # Analyze ↔ Coding 协商中
-  - CODING         # Coding + Test Agent 并行开发中
-  - TESTING        # Test Agent 独立运行（非同步模式）
+  - CODING         # Coding Agent 执行任务中
+  - TESTING        # Test Agent 执行任务中
   - COMPILING      # Compile Agent 运行中
-  - FIXING         # Coding Agent 修复中（循环）
+  - FIXING         # 修复中（循环）
   - DEPLOY_TESTING # DT Agent 运行中
   - REVIEWING      # 等待人工审查
   - COMPLETED      # 全部完成
   - FAILED         # 无法自动恢复的错误
 
 transitions:
-  IDLE → INITIALIZING:   收到启动指令
-  INITIALIZING → ANALYZING:  检测到 .complete
-  ANALYZING → NEGOTIATING:   feature_list.json 生成
-  NEGOTIATING → CODING:      sprint_contract.md agreed
-  CODING → TESTING:          需要单独运行 Test Agent（非同步模式）
-  CODING → COMPILING:      code_files.json 完成 + test_files.json 完成（同步模式）
-  TESTING → COMPILING:     test_files.json 完成
+  IDLE → INITIALIZING:         收到启动指令
+  INITIALIZING → ANALYZING:    检测到 .complete
+  ANALYZING → TESTING:         task.md 完成，先执行 TDD 测试（TASK-T-*）
+  ANALYZING → CODING:        TESTING 完成（或并行）
+  TESTING → COMPILING:      TDD 测试完成（test_files.json）
+  CODING → COMPILING:       Coding 实现完成（code_files.json）
+  (TESTING + CODING) → COMPILING: 两者均完成
   COMPILING → FIXING:        编译失败且重试 < 5
   FIXING → COMPILING:        修复完成
   COMPILING → DEPLOY_TESTING: 编译通过
-  DEPLOY_TESTING → FIXING:   API 测试失败（逻辑错误）
+  DEPLOY_TESTING → FIXING:    API 测试失败（逻辑错误）
   DEPLOY_TESTING → REVIEWING: DT 报告生成（人工介入点）
-  REVIEWING → COMPLETED:     人工确认通过
+  REVIEWING → COMPLETED:      人工确认通过
   REVIEWING → FIXING:        人工标记需修复
   any → FAILED:             重试耗尽或系统错误
 ```
+
+### 任务追踪
+```yaml
+# task.md 中的任务状态
+task_status:
+  coding:
+    TASK-C-F001-01: pending  # [ ] 未完成
+    TASK-C-F001-01: done    # [x] 已完成
+  test:
+    TASK-T-F001-01: pending
+    TASK-T-F001-01: done
+```
+
+### TDD 执行模式
+
+> 测试驱动开发（TDD）：Test Agent 先于 Coding Agent 完成对应 TASK-T-*，因为测试精确到类名、方法名、输入输出类型和参数顺序
+
+#### 执行顺序（标准模式）
+1. **Test Agent** 执行 TASK-T-F001-01（测试用例） → 依赖 task.md 中定义的类名/方法名
+2. **Coding Agent** 实现 TASK-C-F001-01（被测代码） → 满足测试期望
+3. 循环直到所有 TASK-C-* + TASK-T-* 均为 done
+
+#### 任务依赖图
+```
+TASK-T-F001-01 → TASK-C-F001-01  # 测试驱动实现
+TASK-T-F001-02 → TASK-C-F001-02
+...
+```
+- Test Agent 按 task.md 定义生成测试代码（精确到类名、方法名、输入输出）
+- Coding Agent 实现被测代码，目标是通过对应测试
+- Manager 强制调用 Agent，直至所有 TASK-* done
 
 ## 输入
 | 来源 | 类型 | 说明 |
@@ -167,8 +197,10 @@ transitions:
 所有中间产物位于 `artifacts/` 目录：
 - `01_initial/project_summary.md`
 - `02_analyze/feature_list.json`
-- `02_analyze/sprint_contract.md`
+- `02_analyze/task.md`
 - `03_coding/code_files.json`
+- `03_coding/task_status.json`
+- `04_test/task_status.json`
 - ...
 
 ## 人工审查记录
@@ -229,16 +261,10 @@ def handle_signal(signal):
         trigger_agent("analyze")
     
     elif signal.agent == "analyze" and signal.type == "complete":
-        # 需要协商，同时触发 Coding Agent 进行技术评估
-        transition_to(NEGOTIATING)
-        trigger_agent("coding", mode="evaluate_only")
-    
-    elif signal.agent == "coding" and signal.type == "contract_proposed":
-        # 收到 Coding Agent 的技术方案
-        update_sprint_contract(signal.data)
-        if contract_agreed():
-            transition_to(CODING)
-            trigger_agent("coding", mode="implement")
+        # Analyze 完成，直接触发 Coding 和 Test
+        transition_to(CODING)
+        trigger_agent("coding")
+        trigger_agent("test")
     
     elif signal.agent == "compile" and signal.type == "needs_fix":
         if retry_counter["compile_fix"] < 5:
@@ -310,7 +336,7 @@ manager:
   human_review:
     enabled: true
     auto_continue_after: 30min
-    required_at: [sprint_contract, final_delivery]
+    required_at: [task_md_complete, final_delivery]
   notification:
     on_completion: true
     on_failure: true
