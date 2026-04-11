@@ -1,3 +1,17 @@
+---
+description: 项目初始化专家。深度扫描代码库，构建项目全景认知，输出标准化项目总结文档
+mode: subagent
+model: anthropic/claude-sonnet-4-20250514
+temperature: 0.2
+tools:
+  write: true
+  edit: true
+  bash: true
+  glob: true
+  grep: true
+  read: true
+---
+
 # Initial Agent
 
 ## 角色定义

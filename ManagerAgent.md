@@ -1,3 +1,17 @@
+---
+description: 系统编排中枢。协调所有 Agent 的执行顺序，管理状态流转，处理异常和人工介入点，维护全局项目状态
+mode: primary
+model: anthropic/claude-sonnet-4-20250514
+temperature: 0.3
+tools:
+  write: true
+  edit: true
+  bash: true
+  glob: true
+  grep: true
+  read: true
+---
+
 # Manager Agent
 
 ## 角色定义

@@ -1,3 +1,16 @@
+---
+description: 测试生成专家。为 Coding Agent 生成的代码创建全面的单元测试，覆盖正常路径、边界条件和异常场景
+mode: subagent
+model: anthropic/claude-sonnet-4-20250514
+temperature: 0.2
+tools:
+  write: true
+  edit: true
+  glob: true
+  grep: true
+  read: true
+---
+
 # Test Agent
 
 ## 角色定义

@@ -1,3 +1,17 @@
+---
+description: 编译验证专家。自动执行代码编译、运行单元测试、捕获所有错误并生成结构化反馈
+mode: subagent
+model: anthropic/claude-sonnet-4-20250514
+temperature: 0.1
+tools:
+  write: true
+  edit: true
+  bash: true
+  glob: true
+  grep: true
+  read: true
+---
+
 # Compile Agent
 
 ## 角色定义
