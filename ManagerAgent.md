@@ -57,8 +57,8 @@ states:
   - INITIALIZING   # Initial Agent 运行中
   - ANALYZING      # Analyze Agent 运行中
   - NEGOTIATING    # Analyze ↔ Coding 协商中
-  - CODING         # Coding Agent 运行中
-  - TESTING        # Test Agent 运行中
+  - CODING         # Coding + Test Agent 并行开发中
+  - TESTING        # Test Agent 独立运行（非同步模式）
   - COMPILING      # Compile Agent 运行中
   - FIXING         # Coding Agent 修复中（循环）
   - DEPLOY_TESTING # DT Agent 运行中
@@ -71,8 +71,9 @@ transitions:
   INITIALIZING → ANALYZING:  检测到 .complete
   ANALYZING → NEGOTIATING:   feature_list.json 生成
   NEGOTIATING → CODING:      sprint_contract.md agreed
-  CODING → TESTING:          code_files.json 完成
-  TESTING → COMPILING:       test_files.json 完成
+  CODING → TESTING:          需要单独运行 Test Agent（非同步模式）
+  CODING → COMPILING:      code_files.json 完成 + test_files.json 完成（同步模式）
+  TESTING → COMPILING:     test_files.json 完成
   COMPILING → FIXING:        编译失败且重试 < 5
   FIXING → COMPILING:        修复完成
   COMPILING → DEPLOY_TESTING: 编译通过
