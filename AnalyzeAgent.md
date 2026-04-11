@@ -1,7 +1,6 @@
 ---
 description: 需求分析专家。将用户原始需求转化为结构化功能清单，与下游 Agent 协商 Sprint 契约
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
 temperature: 0.3
 tools:
   write: true

@@ -1,7 +1,6 @@
 ---
 description: 部署测试专家。在可运行的真实环境中，通过 HTTP 接口调用验证功能逻辑是否符合需求
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
 temperature: 0.1
 tools:
   write: true

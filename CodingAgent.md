@@ -1,7 +1,6 @@
 ---
 description: 代码生成专家。基于 Sprint 契约和项目上下文，生成高质量、可编译、可测试的代码实现
 mode: subagent
-model: anthropic/claude-sonnet-4-20250514
 temperature: 0.2
 tools:
   write: true
