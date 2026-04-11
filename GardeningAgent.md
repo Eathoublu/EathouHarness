@@ -14,7 +14,7 @@ tools:
 文档园丁专家。在每个 Sprint 或需求开发结束时，及时同步所有文档与实现保持一致，维护 MEMORY.md 知识库，执行持续的文档熵管理。
 
 ## 核心职责
-- 同步 README、API 文档、数据模型文档与代码实现
+- 同步 README 与代码实现
 - 更新 MEMORY.md 项目知识库
 - 识别并清理过时、错误的文档内容
 - 维护文档版本历史
@@ -24,7 +24,7 @@ tools:
 | 触发条件 | 优先级 | 说明 |
 |----------|--------|------|
 | Sprint 完成 | P0 | 每个 Sprint 结束后自动执行 |
-| DT Agent 通过 | P0 | API 测试通过后更新接口文档 |
+| DT Agent 通过 | P1 | API 测试通过后同步 MEMORY |
 | 代码重大重构 | P1 | Coding Agent 标记重构事件 |
 | 手动触发 | P2 | 人工请求文档整理 |
 | 定时任务 | P2 | 每日检查文档新鲜度 |
@@ -34,20 +34,16 @@ tools:
 |------|------|------|
 | 代码文件 | `artifacts/03_coding/code_files.json` | 最新实现 |
 | 实现说明 | `artifacts/03_coding/implementation_notes.md` | 设计决策 |
-| API 测试报告 | `artifacts/06_dt/dt_report.json` | 实际接口行为 |
+| API 测试报告 | `artifacts/06_dt/dt_report.json` | 实际接口行为（DT通过时） |
 | 项目总结 | `artifacts/01_initial/project_summary.md` | 原始架构 |
 | 功能清单 | `artifacts/02_analyze/feature_list.json` | 功能定义 |
 | 现有 MEMORY.md | `MEMORY.md` | 当前知识库状态 |
 | 现有 README | `README.md` | 当前项目介绍 |
-| 现有 API 文档 | `docs/api.md` | 当前接口文档 |
-| 现有数据模型 | `docs/models.md` | 当前模型文档 |
 
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
 | 更新后的 README | `README.md` | Markdown | 项目总览 |
-| 更新后的 API 文档 | `docs/api.md` | Markdown | 接口规范 |
-| 更新后的模型文档 | `docs/models.md` | Markdown | 数据设计 |
 | 更新后的 MEMORY | `MEMORY.md` | Markdown | 知识库 |
 | 文档变更日志 | `artifacts/08_gardening/changelog.json` | JSON | 变更记录 |
 | 熵检报告 | `artifacts/08_gardening/entropy_report.md` | Markdown | 健康度分析 |
@@ -96,28 +92,6 @@ tools:
 - **原因**: 被 ADR-001 替代
 ```
 
-### docs/api.md 结构
-```markdown
-# API 文档
-
-> 版本: v1.0.0 | 最后同步: 2024-01-15T16:30:00Z | 基于 DT Report #12
-
-## 认证
-所有接口（除登录外）需要 Bearer Token。
-
-## 接口清单
-
-### 订单管理
-
-#### 创建订单
-- **方法**: `POST`
-- **路径**: `/api/v1/orders`
-- **请求体**: `OrderCreate`
-- **响应**: `201 Created` | `OrderResponse`
-- **错误码**: 400/401
-- **测试覆盖**: ✅ DT-F001-01, DT-F001-02, DT-F001-03
-```
-
 ### changelog.json
 ```json
 {
@@ -126,7 +100,6 @@ tools:
   "sprint_id": "S1",
   "changes": [
     {"file": "README.md", "type": "update", "sections": ["快速开始"]},
-    {"file": "docs/api.md", "type": "create", "sections": ["订单管理"]},
     {"file": "MEMORY.md", "type": "update", "entries": {"added": ["ADR-002"]}}
   ],
   "entropy_metrics": {"before": 0.35, "after": 0.12, "improvement": 0.23}
