@@ -135,7 +135,7 @@ ANALYZING → CODING║TEST: Analyze 完成 → 并行触发 Coding 和 Test
 CODING → COMPILING:     检测 03_coding/.complete 存在 → 触发 Compile
 TESTING → COMPILING:    检测 04_test/.complete 存在 → 触发 Compile
 COMPILING → FIXING:      编译失败且重试 < max_retries
-COMPILING → REVIEWING:   编译通过 → 审查代码
+COMPILING → REVIEWING:   编译通过 → ReviewingAgent 审查代码
 REVIEWING → FIXING:      审查不通过 → 责令 CodingAgent 修复
 REVIEWING → DEVELOPER_TESTING: 审查通过 → 启动应用测试
 DEVELOPER_TESTING → FIXING:   DT 失败 → 修复代码
@@ -167,7 +167,9 @@ Subagent 完成任务后生成空的 `.complete` 文件作为信号。ManagerAge
 | Coding | code_files.json 包含所有 TASK-C-* 实现 | 数量 = task 中的任务数 | 责令 CodingAgent: "完成 TASK-C-*: {未完成任务列表}" |
 | Test | test_files.json 包含所有 TASK-T-* 测试 | 数量 = task 中的任务数 | 责令 TestAgent: "补充测试 TASK-T-*: {未完成列表}" |
 | Compile | compile_result.json pass + 命令 + 输出 | status==pass 且包含命令和输出 | 责令 CodingAgent: "修复编译错误: {错误信息}" |
+| Reviewing | review_report.json pass | 通过代码审查，无严重问题 | 责令 CodingAgent: "修复代码问题: {问题列表}" |
 | DT | dt_report.json pass_rate==100% | pass_rate=100% | 责令 CodingAgent/TestAgent: "修复 DT 失败: {失败场景}" |
+| Gardening | final_report.md + changelog.json 存在 | 文件存在 | 责令 GardeningAgent: "补充归档: {缺失项}" |
 
 ### Compile 产出规范
 compile_result.json 必须包含：
@@ -280,12 +282,13 @@ transitions:
   TESTING → COMPILING:    Test 完成后触发 Compile
   COMPILING → FIXING:        编译失败，重试 < max_retries
   FIXING → COMPILING:        修复完成
-  COMPILING → REVIEWING:   编译通过，人工审查
+  COMPILING → REVIEWING:   编译通过，ReviewingAgent 审查代码
   REVIEWING → FIXING:      审查不通过，责令 CodingAgent 修复
   REVIEWING → DEVELOPER_TESTING:  审查通过，启动应用测试
   DEVELOPER_TESTING → FIXING:   DT 失败，修复代码
   DEVELOPER_TESTING → GARDENING: DT 通过，触发归档
   GARDENING → COMPLETED:   归档完成，交付
+  any → FAILED:             重试耗尽或系统错误
 ```
 
 ### 任务追踪
