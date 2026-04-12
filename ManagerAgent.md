@@ -71,13 +71,24 @@ tools:
 ```
 推动逻辑:
 1. 当前阶段完成（验证通过）
-2. 确定下一阶段
-3. 准备 prompt（包含需求、上下文）
-4. 调用对应 Subagent
-5. 轮询等待 .complete 信号
-6. 验证产出物
-7. 循环直到完成或回退
+2. 更新 artifacts/.state: current_state = 下一阶段, agents_status.{阶段}.status = "completed"
+3. 确定下一阶段
+4. 准备 prompt（包含需求、上下文）
+5. 调用对应 Subagent
+6. 轮询等待 .complete 信号
+7. 验证产出物
+8. 若验证通过: .complete 写入 "approve: {timestamp}"
+9. 循环直到完成或回退
 ```
+
+### 状态文件更新时机
+| 时机 | 更新内容 |
+|------|----------|
+| 启动时 | project_id, started_at, current_state = "CHECKING" |
+| 触发 Subagent 前 | current_state = 阶段名, agents_status.{阶段}.status = "running" |
+| Subagent 完成验证通过 | agents_status.{阶段}.status = "completed", current_state = 下一阶段 |
+| 触发修复时 | retry_counters.{阶段}_fix += 1 |
+| 人工介入时 | human_review_required = true |
 
 ## 信号检测机制
 
