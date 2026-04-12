@@ -55,8 +55,8 @@ models:
 # 架构文档
 
 ## 技术栈
-- Go 1.21
-- Gin
+- Java 17
+- PostgreSQL
 
 ## 分层
 - handler: 接口层
