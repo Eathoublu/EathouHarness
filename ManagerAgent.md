@@ -34,7 +34,7 @@ tools:
 
 | 阶段 | 路径 |
 |------|------|
-| Initial | `artifacts/01_initial/.complete` |
+| Initial | `artifacts/global/.complete` |
 | Analyze | `artifacts/artifact-{demand}-{YYYY-mm-dd}/02_analyze/.complete` |
 | Coding | `artifacts/artifact-{demand}-{YYYY-mm-dd}/03_coding/.complete` |
 | Test | `artifacts/artifact-{demand}-{YYYY-mm-dd}/04_test/.complete` |
@@ -62,15 +62,19 @@ def wait_for_complete(phase: str, timeout: int = 3600) -> bool:
 ### 状态转换触发
 ```
 IDLE → CHECKING:          收到用户需求
-CHECKING → INITIALIZING:  检测 artifacts/global/ 缺失 → 触发 Initial
-CHECKING → ANALYZING:     检测 artifacts/global/ 完备 → 触发 Analyze
-INITIALIZING → CHECKING: 检测 01_initial/.complete 存在 → 触发 Analyze
-ANALYZING → TESTING:    检测 02_analyze/.complete 存在 → 触发 Test
-TESTING → COMPILING:    检测 04_test/.complete 存在 → 触发 Compile
+CHECKING → INITIALIZING:  artifacts/global/ 缺失 → 触发 Initial
+CHECKING → ANALYZING:     artifacts/global/ 完备 → 触发 Analyze
+INITIALIZING → ANALYZING: Initial 完成 → 触发 Analyze（跳过重复检查）
+ANALYZING → CODING║TEST: Analyze 完成 → 并行触发 Coding 和 Test
 CODING → COMPILING:     检测 03_coding/.complete 存在 → 触发 Compile
-COMPILING → FIXING:      编译失败且重试 < 5
-COMPILING → DEPLOY_TESTING: 检测 05_compile/.complete 存在 → 触发 DT
-DEPLOY_TESTING → REVIEWING: 检测 06_dt/.complete 存在 → 等待人工审查
+TESTING → COMPILING:    检测 04_test/.complete 存在 → 触发 Compile
+COMPILING → FIXING:      编译失败且重试 < max_retries
+COMPILING → REVIEWING:   编译通过 → 审查代码
+REVIEWING → FIXING:      审查不通过 → 责令 CodingAgent 修复
+REVIEWING → DEVELOPER_TESTING: 审查通过 → 启动应用测试
+DEVELOPER_TESTING → FIXING:   DT 失败 → 修复代码
+DEVELOPER_TESTING → GARDENING: DT 通过 → 归档
+GARDENING → COMPLETED:   归档完成 → 交付
 ```
 
 ### .complete 验证机制
@@ -194,27 +198,28 @@ states:
   - TESTING        # Test Agent 执行任务中
   - COMPILING      # Compile Agent 运行中
   - FIXING         # 修复中（循环）
-  - DEVELOPER TESTING # DT Agent 运行中
-  - REVIEWING      # 等待人工审查
+  - REVIEWING      # 审查代码
+  - DEVELOPER_TESTING # 启动应用测试
+  - GARDENING     # 归档完成
   - COMPLETED      # 全部完成
   - FAILED         # 无法自动恢复的错误
 
 transitions:
-  IDLE → CHECKING:          收到用户需求，开始处理
-  CHECKING → ANALYZING:     三个基础文件完备，跳过 Initial
-  CHECKING → INITIALIZING:  三个文件缺失或不完备，触发 Initial
-  INITIALIZING → CHECKING:  Initial 完成，重新检查
-  ANALYZING → TESTING:         task.md 完成，先执行 TDD 测试（TASK-T-*）
-  ANALYZING → CODING:        TESTING 完成（或并行）
-  (TESTING + CODING) → COMPILING: 两者均完成
-  COMPILING → FIXING:        编译失败，未达最大重试次数
+  IDLE → CHECKING:          收到用户需求
+  CHECKING → ANALYZING:     artifacts/global/ 完备，跳过 Initial
+  CHECKING → INITIALIZING:  artifacts/global/ 缺失，触发 Initial
+  INITIALIZING → ANALYZING:  Initial 完成，触发 Analyze
+  ANALYZING → CODING║TEST: Analyze 完成，并行触发 Coding 和 Test（变体 TDD）
+  CODING → COMPILING:     Coding 完成后触发 Compile
+  TESTING → COMPILING:    Test 完成后触发 Compile
+  COMPILING → FIXING:        编译失败，重试 < max_retries
   FIXING → COMPILING:        修复完成
-  COMPILING → REVIEWING: 编译通过，检视代码
-  REVIEWING → FIXING:  检视出现问题，调用CODING agent继续完善
-  REVIEWING → DEVELOPER_TESTING:  测试成功，检视代码
-  DEVELOPER_TESTING → FIXING:    API 测试失败（逻辑错误）
-  REVIEWING → COMPLETED:      确认通过，最终状态通过
-  any → FAILED:             重试耗尽或系统错误
+  COMPILING → REVIEWING:   编译通过，人工审查
+  REVIEWING → FIXING:      审查不通过，责令 CodingAgent 修复
+  REVIEWING → DEVELOPER_TESTING:  审查通过，启动应用测试
+  DEVELOPER_TESTING → FIXING:   DT 失败，修复代码
+  DEVELOPER_TESTING → GARDENING: DT 通过，触发归档
+  GARDENING → COMPLETED:   归档完成，交付
 ```
 
 ### 任务追踪
@@ -231,21 +236,28 @@ task_status:
 
 ### TDD 执行模式
 
-> 测试驱动开发（TDD）：Test Agent 先于（或并行） Coding Agent 完成对应 TASK-T-*，因为测试精确到类名、方法名、输入输出类型和参数顺序
+> 本系统采用 TDD 变体：Test Agent 和 Coding Agent **并行**执行，基于 Analyze 输出（task.md）设计/实现
+> - Test 按 task.md 生成测试（精确类名、方法名、参数类型）
+> - Coding 按 task.md 实现代码（满足测试期望）
+> - 两者同时进行，非严格先后
 
-#### 执行顺序（标准模式）
-1. **Test Agent** 执行 TASK-T-F001-01（测试用例） → 依赖 task.md 中定义的类名/方法名
-2. **Coding Agent** 实现 TASK-C-F001-01（被测代码） → 满足测试期望
-3. 循环直到所有 TASK-C-* + TASK-T-* 均为 done
+#### 执行顺序
+1. Analyze 完成 → 并行触发 Coding + Test
+2. Coding 实现 TASK-C-*
+3. Test 生成 TASK-T-*
+4. Compile 完成后验证两者是否匹配
+5. 循环直到所有 TASK-* done
 
-#### 任务依赖图
+#### 任务关系
 ```
-TASK-T-F001-01 → TASK-C-F001-01  # 测试驱动实现
-TASK-T-F001-02 → TASK-C-F001-02
-...
+CODING(TASK-C-*) ║ TEST(TASK-T-*)  # 并行执行
+     ↓                      ↓
+  code_files.json      test_files.json
+          ↓ (Compile 验证) ↓
+            pass/fail
 ```
-- Test Agent 按 task.md 定义生成测试代码（精确到类名、方法名、输入输出）
-- Coding Agent 实现被测代码，目标是通过对应测试
+- Test 按 task.md 定义生成测试（精确类名、方法名、输入输出）
+- Coding 按 task.md 实现代码（满足测试期望）
 - Manager 强制调用 Agent，直至所有 TASK-* done
 
 ## 输入
