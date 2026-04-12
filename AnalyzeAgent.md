@@ -110,58 +110,185 @@ tools:
 
 ## 任务清单
 
-- [ ] TASK-C-F001-01: 创建 Order controller (controllers/order_controller.py)，实现 POST /api/v1/orders
-- [ ] TASK-C-F001-02: 创建 OrderService (services/order_service.py)，实现 create_order() 方法
-- [ ] TASK-C-F001-03: 创建 Order ORM 模型 (models/order.py)，包含 id, user_id, status, total_amount, version, created_at, updated_at
-- [ ] TASK-C-F001-04: 创建 OrderItem ORM 模型 (models/order.py)
-- [ ] TASK-C-F001-05: 创建 OrderCreate schema (schemas/order_schema.py)
-- [ ] TASK-C-F001-06: 创建 OrderResponse schema (schemas/order_schema.py)
-- [ ] TASK-C-F001-07: 实现库存校验逻辑 (调用 InventoryService.check_stock)
-- [ ] TASK-C-F001-08: 实现订单号生成 (Snowflake，格式 ORD-YYYYMMDD-XXXX)
+- [ ] TASK-C-F001-01: 创建 OrderController.create_order() 实现 POST /api/v1/orders
+- [ ] TASK-C-F001-02: 创建 OrderService.create_order() 实现业务逻辑
+- [ ] TASK-C-F001-03: 创建 Order ORM 模型
+- [ ] TASK-C-F001-04: 创建 OrderItem ORM 模型
+- [ ] TASK-C-F001-05: 创建 OrderCreate 协议类
+- [ ] TASK-C-F001-06: 创建 OrderResponse 协议类
+- [ ] TASK-C-F001-07: 实现 InventoryService.check_stock() 库存校验
+- [ ] TASK-C-F001-08: 实现 OrderService.generate_order_id() 订单号生成
 - [ ] TASK-C-F001-09: 实现数据库事务保存
-- [ ] TASK-C-F002-01: 实现 GET /api/v1/orders 查询接口
-- [ ] TASK-C-F002-02: 实现按 user_id 查询 + created_at 降序排序
+- [ ] TASK-C-F002-01: 创建 OrderController.list_orders() 实现 GET /api/v1/orders
+- [ ] TASK-C-F002-02: 实现 OrderRepository.find_by_user_id() 按 user_id 查询
 
-## 任务说明
+## 精确到入参的代码设计
 
-#### F001 订单创建
-| 任务ID | 类/方法 | 说明 |
-|--------|--------|------|
-| TASK-C-F001-01 | OrderController.create_order() | POST /api/v1/orders，status_code=201 |
-| TASK-C-F001-02 | OrderService.create_order(user_id, items, total_amount) | 业务逻辑 |
-| TASK-C-F001-03 | Order ORM | id=订单号, user_id, status, total_amount, version, created_at, updated_at |
-| TASK-C-F001-04 | OrderItem ORM | order_id, product_id, quantity, price |
-| TASK-C-F001-05 | OrderCreate | items: List[OrderItemCreate], total_amount: Decimal |
-| TASK-C-F001-06 | OrderResponse | order_id, status, total_amount, created_at |
-| TASK-C-F001-07 | 库存校验 | 调用 inventory.check_stock(product_id, quantity) |
-| TASK-C-F001-08 | 订单号生成 | SnowflakeService.gen() 格式 ORD-YYYYMMDD-XXXX |
-| TASK-C-F001-09 | 事务保存 | db.add(order), db.commit() |
+### Python 实现
 
-#### F002 订单查询
-| 任务ID | 类/方法 | 说明 |
-|--------|--------|------|
-| TASK-C-F002-01 | OrderController.list_orders() | GET /api/v1/orders |
-| TASK-C-F002-02 | OrderService.listByUser(userId) | query.filter(userId).orderBy(desc(createdAt)) |
+#### TASK-C-F001-02: OrderService.create_order()
+```python
+# 文件: services/order_service.py
+class OrderService:
+    def create_order(
+        self,
+        user_id: str,
+        items: List[OrderItemCreate],
+        total_amount: Decimal
+    ) -> Order:
+        """
+        Args:
+            user_id: str - 用户ID
+            items: List[OrderItemCreate] - 订单项列表
+            total_amount: Decimal - 总金额
+        
+        Returns:
+            Order: 订单对象（含 order_id, status, total_amount, created_at）
+        
+        Raises:
+            InsufficientStockError: 库存不足
+        """
+```
+
+#### TASK-C-F001-03: Order ORM 模型
+```python
+# 文件: models/order.py
+class Order(Base):
+    __tablename__ = "orders"
+    id: str = Column(String, primary_key=True)
+    user_id: str = Column(String, index=True)
+    status: str = Column(String, default="created")
+    total_amount: Decimal = Column(Numeric(10, 2))
+    version: int = Column(Integer, default=0)
+    created_at: datetime = Column(DateTime)
+    updated_at: datetime = Column(DateTime)
+```
+
+### Java 实现
+
+#### TASK-C-F001-02: OrderService.createOrder()
+```java
+// 文件: OrderService.java
+public Order createOrder(
+    String userId,
+    List<OrderItemDto> items,
+    BigDecimal totalAmount
+) throws InsufficientStockException {
+    // 参数类型: String, List<OrderItemDto>, BigDecimal
+    // 返回类型: Order
+    // 抛出异常: InsufficientStockException
+}
+```
+
+#### TASK-C-F001-03: Order Entity
+```java
+// 文件: Order.java
+@Entity
+@Table(name = "orders")
+public class Order {
+    @Id
+    private String id;
+    
+    @Column(name = "user_id")
+    private String userId;
+    
+    private String status;
+    private BigDecimal totalAmount;
+    
+    @Version
+    private Integer version;
+    
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+```
 ```
 
 ### test_task.md
 ```markdown
 # Test Task: S1 订单基础功能
 
-> TDD 原理：先写测试用例精确到类名、方法名、输入输出类型和参数顺序，再写实现代码
+> TDD 原理：先写测试用例精确到类名、方法名、参数类型和顺序，再写实现代码
 
 ## 任务清单
 
 - [ ] TASK-T-F001-01: 测试 OrderService.createOrder() 正常流程
-  - 类: TestOrderService (Python) / OrderServiceTest (Java)
-  - 方法: test_create_order_success / testCreateOrderSuccess
-  - 输入: userId="U001", items=[OrderItemDto(productId="P001", quantity=2)], totalAmount=199.98
-  - 期望: 返回 Order，orderId 格式 ORD-YYYYMMDD-XXXX，status="created"
-
 - [ ] TASK-T-F001-02: 测试 OrderService.createOrder() 库存不足
-  - 方法: test_create_order_insufficient_stock / testCreateOrderInsufficientStock
-  - Mock: InventoryService.checkStock(productId="P001", quantity=2) → false
-  - 期望: 抛 InsufficientStockException
+- [ ] TASK-T-F001-03: 测试 OrderService.createOrder() 空 items
+- [ ] TASK-T-F001-04: 测试 Order ORM 字段映射
+- [ ] TASK-T-F001-05: 测试 OrderController.createOrder() HTTP
+
+## 精确到入参的测试设计
+
+### Python 测试用例
+
+#### TASK-T-F001-01: test_create_order_success
+```python
+# 文件: tests/unit/services/test_order_service.py
+class TestOrderService:
+    def test_create_order_success(self):
+        # 精确到参数类型和顺序
+        user_id: str = "U001"
+        items: List[OrderItemCreate] = [
+            OrderItemCreate(product_id="P001", quantity=2)
+        ]
+        total_amount: Decimal = Decimal("199.98")
+        
+        # 执行
+        result = order_service.create_order(user_id, items, total_amount)
+        
+        # 精确到返回值字段
+        assert result.order_id.startswith("ORD-")
+        assert result.status == "created"
+        assert result.user_id == user_id
+```
+
+#### TASK-T-F001-02: test_create_order_insufficient_stock
+```python
+def test_create_order_insufficient_stock(self):
+    # Mock 精确到方法签名
+    when(inventory_service.check_stock("P001", 2)).thenReturn(False)
+    
+    # 执行
+    with pytest.raises(InsufficientStockError):
+        order_service.create_order("U001", items, total_amount)
+```
+
+### Java ���试用例
+
+#### TASK-T-F001-01: testCreateOrderSuccess
+```java
+// 文件: OrderServiceTest.java
+@Test
+void testCreateOrderSuccess() {
+    // 精确到参数类型和顺序
+    String userId = "U001";
+    List<OrderItemDto> items = List.of(new OrderItemDto("P001", 2));
+    BigDecimal totalAmount = new BigDecimal("199.98");
+    
+    // 执行
+    Order result = orderService.createOrder(userId, items, totalAmount);
+    
+    // 精确到返回值字段
+    assertTrue(result.getOrderId().startsWith("ORD-"));
+    assertEquals("created", result.getStatus());
+}
+```
+
+#### TASK-T-F001-02: testCreateOrderInsufficientStock
+```java
+@Test
+void testCreateOrderInsufficientStock() {
+    // Mock 精确到方法签名
+    when(inventoryService.checkStock("P001", 2)).thenReturn(false);
+    
+    // 执行
+    assertThrows(
+        InsufficientStockException.class,
+        () -> orderService.createOrder(userId, items, totalAmount)
+    );
+}
+```
 
 - [ ] TASK-T-F001-03: 测试 OrderService.createOrder() 空 items
   - 方法: test_create_order_empty_items / testCreateOrderEmptyItems
@@ -179,27 +306,6 @@ tools:
   - Mock: OrderService.createOrder() → OrderResponse
   - 期望: HTTP 201, response body 包含 orderId
 ```
-
-### 任务说明
-
-#### F001 订单创建
-| 任务ID | 类/方法 | 说明 |
-|--------|--------|------|
-| TASK-C-F001-01 | OrderController.create_order() | POST /api/v1/orders，status_code=201 |
-| TASK-C-F001-02 | OrderService.create_order(user_id, items, total_amount) | 业务逻辑 |
-| TASK-C-F001-03 | Order ORM | id=订单号, user_id, status, total_amount, version, created_at, updated_at |
-| TASK-C-F001-04 | OrderItem ORM | order_id, product_id, quantity, price |
-| TASK-C-F001-05 | OrderCreate | items: List[OrderItemCreate], total_amount: Decimal |
-| TASK-C-F001-06 | OrderResponse | order_id, status, total_amount, created_at |
-| TASK-C-F001-07 | 库存校验 | 调用 inventory.check_stock(product_id, quantity) |
-| TASK-C-F001-08 | 订单号生成 | SnowflakeService.gen() 格式 ORD-YYYYMMDD-XXXX |
-| TASK-C-F001-09 | 事务保存 | db.add(order), db.commit() |
-
-#### F002 订单查询
-| 任务ID | 类/方法 | 说明 |
-|--------|--------|------|
-| TASK-C-F002-01 | OrderController.list_orders() | GET /api/v1/orders |
-| TASK-C-F002-02 | OrderService.listByUser(userId) | query.filter(userId).orderBy(desc(createdAt)) |
 
 ### 3. 数据模型 (models/order.py) - Python 示例
 ```python
