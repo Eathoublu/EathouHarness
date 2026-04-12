@@ -228,52 +228,36 @@ compile_result.json 必须包含：
   1. Agent 超时: 强制终止，重启 Agent（保留上下文）
   2. 信号丢失: 人工介入检查
 
-## 系统架构
-```
-                                ┌─────────────┐
-                     .─────────▶│   Initial   │── .complete
-                     │          │   Agent     │
-                     │          └──────┬──────┘
-                     │                 .──▶┌─────────────┐
-                     │                 │   │   Analyze   │
-                     │                 │   │   Agent     │
-                     │                 │   └──┬──────────┘
-                     │                 │      │
-                     │                 └──────┼──────▶ .complete
-                     │                        │
-         ┌─────────────┐                      │
-         │    Coding   │◀─────────────────────│
-         │   Agent     │── .complete          ▼ 
-         └──────┬──────┘         ┌─────────────┐
-                │                │    Test     │
-                │                │   Agent     │
-                │                └─────┬───────┘
-                │                      │
-                │                      └─ .complete
-                │                        │
-                ▼                        ▼
-         ┌─────────────────────────────────┐
-         │         Compile Agent           │── .complete
-         └────────────┬────────────────────┘
-                      │
-                      ▼
-         ┌─────────────────────────────────┐
-         │       Review                    │── COMPLETED
-         └────────────┬────────────────────┘
-                      │
-                      ▼
-         ┌─────────────────────────────────┐
-         │           DT Agent              │── .complete
-         └────────────┬────────────────────┘
-                      │
-                      ▼
-         ┌─────────────────────────────────┐
-         │       Gardening                 │── COMPLETED
-         └─────────────────────────────────┘
-
-
-  状态机:
-  IDLE → CHECKING → ANALYZING → CODING ║ TEST → COMPILING → REVIEWING → DT → COMPLETED
+## 系统架构（Mermaid）
+```mermaid
+flowchart TD
+    START([IDLE]) --> CHECK{CHECKING}
+    CHECK -->|global 完备| ANALYZING
+    CHECK -->|global 缺失| INITIAL[InitialAgent]
+    INITIAL --> ANALYZING
+    
+    ANALYZING[AnalyzeAgent] --> PAR{CODING ║ TEST}
+    PAR -->|Coding| CODING[CodingAgent]
+    PAR -->|Test| TEST[TestAgent]
+    CODING --> COMPILING
+    TEST --> COMPILING
+    
+    COMPILING[CompileAgent] --> COMPILE_RESULT
+    COMPILE_RESULT -->|pass| REVIEWING[ReviewingAgent]
+    COMPILE_RESULT -->|fail| FIXING
+    
+    REVIEWING --> REVIEW_RESULT
+    REVIEW_RESULT -->|pass| DT[DTAgent]
+    REVIEW_RESULT -->|fail| FIXING
+    
+    DT --> DT_RESULT
+    DT_RESULT -->|pass| GARDENING[GardeningAgent]
+    DT_RESULT -->|fail| FIXING
+    
+    GARDENING --> END([COMPLETED])
+    
+    FIXING -.-> CODING
+    FIXING -.-> REVIEWING
 ```
 
 ## 状态机定义
