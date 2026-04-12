@@ -73,6 +73,22 @@ COMPILING → DEPLOY_TESTING: 检测 05_compile/.complete 存在 → 触发 DT
 DEPLOY_TESTING → REVIEWING: 检测 06_dt/.complete 存在 → 等待人工审查
 ```
 
+### .complete 验证机制
+Subagent 完成任务后生成空的 `.complete` 文件作为信号。ManagerAgent 获取信号后，必须验证任务是否真正完成：
+
+```
+验证流程:
+1. Subagent 生成 .complete → 通知 Manager
+2. Manager 检查产出物是否符合预期（artifact 文件存在且内容有效）
+3. 若验证通过:
+   - 在 .complete 中写入 "approve: {timestamp}"
+   - 进入下一阶段
+4. 若验证不通过:
+   - 删除 .complete 文件
+   - 责令 Subagent 继续工作
+   - 记录一次 retry
+```
+
 ### 超时处理
 - 各阶段默认超时时间见配置参数
 - 超时后执行策略：
@@ -152,10 +168,8 @@ transitions:
   INITIALIZING → CHECKING:  Initial 完成，重新检查
   ANALYZING → TESTING:         task.md 完成，先执行 TDD 测试（TASK-T-*）
   ANALYZING → CODING:        TESTING 完成（或并行）
-  TESTING → COMPILING:      TDD 测试完成（test_files.json）
-  CODING → COMPILING:       Coding 实现完成（code_files.json）
   (TESTING + CODING) → COMPILING: 两者均完成
-  COMPILING → FIXING:        编译失败且重试 < 5
+  COMPILING → FIXING:        编译失败，未达最大重试次数
   FIXING → COMPILING:        修复完成
   COMPILING → DEVELOPER_TESTING: 编译通过
   DEVELOPER_TESTING → FIXING:    API 测试失败（逻辑错误）
@@ -269,62 +283,32 @@ artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
 }
 ```
 
-l
+### final_report.md
 ```markdown
-# 项目交付报告
+# 交付报告
 
-## 项目信息
-- **项目ID**: proj-20240115-001
-- **需求描述**: [用户原始需求]
-- **执行时间**: 2024-01-15 09:00 ~ 16:00 (7小时)
-- **总成本**: $200 (预估)
+| 项目ID | 需求 | 时间 | 成本 |
+|--------|------|------|------|
+| proj-xxx | ADD-API-XXX | 7h | $200 |
 
 ## 执行摘要
-| 阶段 | Agent | 耗时 | 状态 | 产出 |
-|------|-------|------|------|------|
-| 项目理解 | Initial | 30min | ✅ | api_list.yaml + data_model.yaml + architecture.md |
-| 需求分析 | Analyze | 45min | ✅ | feature_list.json + task.md |
-| Sprint1 | Coding+Test+Compile | 2h | ✅ | 订单创建/查询功能 |
-| Sprint2 | Coding+Test+Compile | 2h | ✅ | 支付集成 |
-| Sprint3 | Coding+Test+Compile | 1.5h | ✅ | 管理后台 |
-| 集成测试 | DT | 30min | ✅ | 12个场景全部通过 |
+| 阶段 | 耗时 | 状态 | 产出 |
+|------|------|------|------|
+| Initial | 30min | ✅ | api_list + data_model + arch |
+| Analyze | 45min | ✅ | feature_list + task |
+| Sprint1 | 2h | ✅ | 订单创建/查询 |
+| Sprint2 | 2h | ✅ | 支付集成 |
+| Sprint3 | 1.5h | ✅ | 管理后台 |
+| DT | 30min | ✅ | 12/12 场景通过 |
 
-## 交付物清单
-- 源代码: `src/` (已验证可编译)
-- 单元测试: `tests/` (覆盖率 87%)
-- API 文档: `docs/api.md` (自动生成)
-- 部署指南: `docs/deployment.md`
+## 质量
+- 覆盖率: 87% | 测试: 100% | 警告: 0
 
-## 质量指标
-- 代码覆盖率: 87% (目标: 85%)
-- API 测试通过率: 100% (12/12)
-- 编译警告: 0
-- 已知问题: 无
+## 交付
+- 源码: `src/` | 测试: `tests/` | 文档: `docs/`
 
-## 技术债务
-| 项 | 优先级 | 建议处理时间 |
-|----|--------|-------------|
-| 订单查询未加缓存 | Low | Sprint 4 |
-
-## Artifact 索引
-所有中间产物位于 `artifacts/` 目录：
-- `01_initial/project_summary.md`
-- `02_analyze/feature_list.json`
-- `02_analyze/task.md`
-- `03_coding/code_files.json`
-- `03_coding/task_status.json`
-- `04_test/task_status.json`
-- ...
-
-## 人工审查记录
-- 审查时间: 2024-01-15T15:30:00Z
-- 审查结果: 通过
-- 备注: 无
-
-## 后续建议
-1. 生产环境部署前进行压力测试
-2. 建议补充监控告警配置
-3. 考虑添加订单超时自动取消机制
+## 后续
+- 压力测试 | 监控告警 | 超时取消
 ```
 ## 异常处理策略
 
@@ -341,8 +325,8 @@ l
 manager:
   polling_interval: 5  # 秒
   max_retries:
-    compile: 5
-    dt: 3
+    compile: 10
+    dt: 10
   timeouts:
     initial: 30min
     analyze: 45min
