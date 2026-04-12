@@ -294,16 +294,18 @@ transitions:
 ```
 
 ### 任务追踪
-```yaml
-# coding_task.md / test_task.md 中的任务状态
-task_status:
-  coding:
-    TASK-C-F001-01: pending  # [ ] 未完成
-    TASK-C-F001-01: done    # [x] 已完成
-  test:
-    TASK-T-F001-01: pending
-    TASK-T-F001-01: done
+coding_task.md / test_task.md 格式：
+```markdown
+# Coding 任务
+
+## F001 订单模块
+- [ ] TASK-C-F001-01: 实现订单创建接口
+- [x] TASK-C-F001-02: 实现订单查询接口
+- [ ] TASK-C-F001-03: 实现订单取消接口
 ```
+
+- 验证方式：检查文件中所有 `[ ]` 是否变为 `[x]`
+- Manager 提取所有 TASK-* 标记，统计完成数量
 
 ### TDD 执行模式
 
