@@ -23,26 +23,33 @@
 ### 流程图（Mermaid）
 ```mermaid
 flowchart TD
-    START([IDLE]) --> CHECK
-    CHECK -->|global 完备| ANALYZE
-    CHECK -->|缺失| INITIAL
-    INITIAL --> ANALYZE
+    START([IDLE]) --> CHECK{CHECKING}
+    CHECK -->|global 完备| ANALYZING
+    CHECK -->|global 缺失| INITIAL[InitialAgent]
+    INITIAL --> ANALYZING
     
-    ANALYZE[Analyze] --> PAR{CODING ║ TEST}
-    PAR --> CODING
-    PAR --> TEST
-    CODING --> COMPILE
-    TEST --> COMPILE
+    ANALYZING[AnalyzeAgent] --> PAR{CODING ║ TEST}
+    PAR -->|Coding| CODING[CodingAgent]
+    PAR -->|Test| TEST[TestAgent]
+    CODING --> COMPILING
+    TEST --> COMPILING
     
-    COMPILE --> REVIEW
-    REVIEW -->|fail| FIX
-    REVIEW --> DT
+    COMPILING[CompileAgent] --> COMPILE_RESULT
+    COMPILE_RESULT -->|pass| REVIEWING[ReviewingAgent]
+    COMPILE_RESULT -->|fail| FIXING
     
-    DT -->|fail| FIX
-    DT --> GARDEN
+    REVIEWING --> REVIEW_RESULT
+    REVIEW_RESULT -->|pass| DT[DTAgent]
+    REVIEW_RESULT -->|fail| FIXING
     
-    GARDEN --> END([COMPLETED])
-    FIX -.-> CODING
+    DT --> DT_RESULT
+    DT_RESULT -->|pass| GARDENING[GardeningAgent]
+    DT_RESULT -->|fail| FIXING
+    
+    GARDENING --> END([COMPLETED])
+    
+    FIXING -.-> CODING
+    FIXING -.-> REVIEWING
 ```
 
 ### TDD 变体
