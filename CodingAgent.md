@@ -23,6 +23,7 @@ tools:
 ## 输出路径
 `artifacts/artifact-{demand}-{YYYY-mm-dd}/03_coding/`
 - code_files.json
+`./`(用户工作目录)
 - 源码文件
 
 ## 产出规范
