@@ -19,7 +19,7 @@ tools:
 ## 核心职责
 - 监听各 Agent 完成信号（`.complete` 文件）
 - 按工作流顺序触发下一个 Agent
-- 处理 Agent 间的协商仲裁
+- 检验subAgent是否正确完成对应工作，若完成触发下一个流程Agent，若未完成则责令其继续直到完成
 - 管理异常情况和重试策略
 - 维护全局状态机
 - 生成最终项目交付报告
@@ -231,9 +231,10 @@ TASK-T-F001-02 → TASK-C-F001-02
 对于需求命名为 `ADD-API-XXX`，创建目录：
 ```
 artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
-├── feature_list.json
-├── coding_task.md
-├── test_task.md
+├── 02_analyze/
+│   ├── feature_list.json
+│   ├── coding_task.md
+│   └── test_task.md
 ├── 03_coding/
 │   ├── code_files.json
 │   └── task_status.json
