@@ -195,8 +195,31 @@ compile_result.json 必须包含：
 4. 若验证不通过:
    - 删除 .complete
    - 记录 retry + 1
+   - 状态回退:
+     * current_state = 回退阶段
+     * agents_status.{阶段}.status = "pending"
+     * agents_status.{回退阶段}.status = "running"
    - 责令对应 Agent 继续工作（明确告知缺失项）
    - 重试次数超过上限 → 人工介入
+```
+
+### 回退状态更新示例
+```
+场景: Reviewing 阶段失败
+
+1. ReviewingAgent 完成 → review_report.json 标记问题
+2. 验证不通过 → 删除 06_reviewing/.complete
+3. 状态回退:
+   artifacts/.state:
+   {
+     "current_state": "CODING",
+     "agents_status": {
+       "reviewing": {"status": "pending"},  // 重置
+       "coding": {"status": "running"}     // 回退到 Coding
+     }
+   }
+4. 责令 CodingAgent: "修复代码问题: {问题列表}"
+5. CodingAgent 修复完成后 → 重新触发 Compile → Reviewing
 ```
 
 ### 超时处理
