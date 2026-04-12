@@ -293,7 +293,7 @@ transitions:
 
 ### 任务追踪
 ```yaml
-# task.md 中的任务状态
+# coding_task.md / test_task.md 中的任务状态
 task_status:
   coding:
     TASK-C-F001-01: pending  # [ ] 未完成
@@ -305,9 +305,9 @@ task_status:
 
 ### TDD 执行模式
 
-> 本系统采用 TDD 变体：Test Agent 和 Coding Agent **并行**执行，基于 Analyze 输出（task.md）设计/实现
-> - Test 按 task.md 生成测试（精确类名、方法名、参数类型）
-> - Coding 按 task.md 实现代码（满足测试期望）
+> 本系统采用 TDD 变体：Test Agent 和 Coding Agent **并行**执行，基于 Analyze 输出（coding_task.md + test_task.md）设计/实现
+> - Test 按 test_task.md 生成测试（精确类名、方法名、参数类型）
+> - Coding 按 coding_task.md 实现代码（满足测试期望）
 > - 两者同时进行，非严格先后
 
 #### 执行顺序
@@ -325,8 +325,8 @@ CODING(TASK-C-*) ║ TEST(TASK-T-*)  # 并行执行
           ↓ (Compile 验证) ↓
             pass/fail
 ```
-- Test 按 task.md 定义生成测试（精确类名、方法名、输入输出）
-- Coding 按 task.md 实现代码（满足测试期望）
+- Test 按 test_task.md 定义生成测试（精确类名、方法名、输入输出）
+- Coding 按 coding_task.md 实现代码（满足测试期望）
 - Manager 强制调用 Agent，直至所有 TASK-* done
 
 ## 输入
@@ -387,7 +387,7 @@ artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
   "current_sprint": "S1",
   "agents_status": {
     "initial": {"status": "completed", "artifact": "api_list.yaml + data_model.yaml + architecture.md"},
-    "analyze": {"status": "completed", "artifact": "feature_list.json + task.md"},
+    "analyze": {"status": "completed", "artifact": "feature_list.json + coding_task.md + test_task.md"},
     "coding": {"status": "completed", "artifact": "code_files.json"},
     "test": {"status": "completed", "artifact": "test_files.json"},
     "compile": {"status": "running", "round": 2, "started_at": "..."},
