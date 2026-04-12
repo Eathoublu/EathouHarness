@@ -128,24 +128,6 @@ def wait_for_complete(phase: str, timeout: int = 3600) -> bool:
     return False
 ```
 
-### 状态转换触发
-```
-IDLE → CHECKING:          收到用户需求
-CHECKING → INITIALIZING:  artifacts/global/ 缺失 → 触发 Initial
-CHECKING → ANALYZING:     artifacts/global/ 完备 → 触发 Analyze
-INITIALIZING → ANALYZING: Initial 完成 → 触发 Analyze（跳过重复检查）
-ANALYZING → CODING║TEST: Analyze 完成 → 并行触发 Coding 和 Test
-CODING → COMPILING:     检测 03_coding/.complete 存在 → 触发 Compile
-TESTING → COMPILING:    检测 04_test/.complete 存在 → 触发 Compile
-COMPILING → FIXING:      编译失败且重试 < max_retries
-COMPILING → REVIEWING:   编译通过 → ReviewingAgent 审查代码
-REVIEWING → FIXING:      审查不通过 → 责令 CodingAgent 修复
-REVIEWING → DT: 审查通过 → 启动应用测试
-DT → FIXING:   DT 失败 → 修复代码
-DT → GARDENING: DT 通过 → 归档
-GARDENING → COMPLETED:   归档完成 → 交付
-```
-
 ### 各阶段完成判断标准
 | 阶段 | 完成标准 | 验证方式 | 回退方式 |
 |------|----------|----------|----------|
@@ -472,6 +454,7 @@ manager:
     coding: 5
     test: 5
     compile: 10
+    review: 10
     dt: 10
   timeouts:
     initial: 30min
@@ -479,11 +462,8 @@ manager:
     coding: 2h
     test: 30min
     compile: 15min
+    reviewing: 30min
     dt: 30min
-  human_review:
-    enabled: true
-    auto_continue_after: 30min
-    required_at: [task_md_complete, final_delivery]
   notification:
     on_completion: true
     on_failure: true
