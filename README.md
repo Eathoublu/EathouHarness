@@ -96,6 +96,29 @@ artifacts/
 - **一般**：代码规范问题
 - **提示**：风格建议
 
+## Harness 思想
+
+### 1. 强制执行验证
+- 关键阶段**必须执行命令**并获取控制台输出
+- Compile 记录编译命令 + 输出（无错误的关键部分）
+- DT 调用 API，记录实际响应
+- 所有输出可追溯、可验证
+
+### 2. 任务闭环
+- task.md 中所有 `[ ]` 必须打勾变成 `[x]`
+- Manager 验证：统计所有 TASK 标记，未完成则继续
+
+### 3. 上下文完备
+- 项目上下文必须完备才能开工
+- Initial 扫描生成 global 文件（API/模型/架构）
+- Analyze 解析 feature + 精确 task
+- 上下文缺失 → 返回上一步补充
+
+### 4. 汇报机制
+- 所有 Subagent 由 Manager 创建
+- 完成后向 Manager 汇报（生成 .complete 信号）
+- Manager 验证通过才进入下一阶段
+
 ## DT 测试用例设计
 
 基于 feature 设计，每个 feature 包含：
