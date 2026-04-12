@@ -25,17 +25,18 @@ tools:
 ## 输入
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| API 清单 | `artifacts/01_initial/api_list.yaml` | 所有 API 接口定义 |
-| 数据模型 | `artifacts/01_initial/data_model.yaml` | 所有数据模型定义 |
-| 架构文档 | `artifacts/01_initial/architecture.md` | 项目架构和约束 |
-| 用户需求 | 用户直接输入 | 原始需求描述 |
+| API 清单 | `artifacts/global/api_list.yaml` | 项目所有 API 接口定义（全局） |
+| 数据模型 | `artifacts/global/data_model.yaml` | 项目所有数据模型定义（全局） |
+| 架构文档 | `artifacts/global/architecture.md` | 项目架构和约束（全局） |
+| 用户需求 | 用户直接输入 | 原始需求描述 + 需求目录名称 |
 
 ## 输出
+目录生成在 `artifacts/artifact-{demand-name}-YYYY-mm-dd/`：
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
-| 功能清单 | `artifacts/02_analyze/feature_list.json` | JSON | 结构化功能定义 |
-| Coding 任务 | `artifacts/02_analyze/coding_task.md` | Markdown | Coding Agent 执行清单 |
-| Test 任务 | `artifacts/02_analyze/test_task.md` | Markdown | Test Agent 执行清单（TDD） |
+| 功能清单 | `feature_list.json` | JSON | 结构化功能定义 |
+| Coding 任务 | `coding_task.md` | Markdown | Coding Agent 执行清单 |
+| Test 任务 | `test_task.md` | Markdown | Test Agent 执行清单（TDD） |
 
 ## 输出规范
 
@@ -44,9 +45,9 @@ tools:
 {
   "version": "1.0",
   "project_context": {
-    "architecture_ref": "artifacts/01_initial/architecture.md",
-    "api_list_ref": "artifacts/01_initial/api_list.yaml",
-    "data_model_ref": "artifacts/01_initial/data_model.yaml",
+    "architecture_ref": "artifacts/global/architecture.md",
+    "api_list_ref": "artifacts/global/api_list.yaml",
+    "data_model_ref": "artifacts/global/data_model.yaml",
     "tech_stack": ["Python", "FastAPI", "PostgreSQL"],
     "constraints": ["复用现有User模型", "遵循RESTful规范", "响应时间<200ms"]
   },
@@ -394,4 +395,4 @@ public class OrderResponse {
 ## 交接触发条件
 - coding_task.md + test_task.md 包含所有方法的精确设计
 - feature_list.json 完成
-- 触发信号：写入 `artifacts/02_analyze/.complete`
+- 触发信号：写入 `{demand-dir}/.complete`

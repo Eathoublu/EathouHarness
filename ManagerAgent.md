@@ -22,30 +22,108 @@ tools:
 - 处理 Agent 间的协商仲裁
 - 管理异常情况和重试策略
 - 维护全局状态机
-- 提供人工审查介入点
 - 生成最终项目交付报告
+
+## 信号检测机制
+
+### .complete 文件约定
+- **内容**: 空文件（仅作为信号标记）
+- **命名**: `.complete`
+- **位置**: 各阶段产物目录
+
+| 阶段 | 路径 |
+|------|------|
+| Initial | `artifacts/01_initial/.complete` |
+| Analyze | `artifacts/02_analyze/.complete` |
+| Coding | `artifacts/03_coding/.complete` |
+| Test | `artifacts/04_test/.complete` |
+| Compile | `artifacts/05_compile/.complete` |
+| DT | `artifacts/06_dt/.complete` |
+| Gardening | `artifacts/08_gardening/.complete` |
+
+### 检测逻辑
+```python
+def check_complete(phase: str) -> bool:
+    """检测指定阶段是否完成"""
+    path = f"artifacts/{phase}/.complete"
+    return os.path.exists(path)
+
+def wait_for_complete(phase: str, timeout: int = 3600) -> bool:
+    """等待阶段完成信号"""
+    start = time.time()
+    while time.time() - start < timeout:
+        if check_complete(phase):
+            return True
+        time.sleep(polling_interval)  # 默认 5 秒
+    return False
+```
+
+### 状态转换触发
+```
+IDLE → CHECKING:          收到用户需求
+CHECKING → INITIALIZING:  检测 artifacts/global/ 缺失 → 触发 Initial
+CHECKING → ANALYZING:     检测 artifacts/global/ 完备 → 触发 Analyze
+INITIALIZING → CHECKING: 检测 01_initial/.complete 存在 → 触发 Analyze
+ANALYZING → TESTING:    检测 02_analyze/.complete 存在 → 触发 Test
+TESTING → COMPILING:    检测 04_test/.complete 存在 → 触发 Compile
+CODING → COMPILING:     检测 03_coding/.complete 存在 → 触发 Compile
+COMPILING → FIXING:      编译失败且重试 < 5
+COMPILING → DEPLOY_TESTING: 检测 05_compile/.complete 存在 → 触发 DT
+DEPLOY_TESTING → REVIEWING: 检测 06_dt/.complete 存在 → 等待人工审查
+```
+
+### 超时处理
+- 各阶段默认超时时间见配置参数
+- 超时后执行策略：
+  1. Agent 超时: 强制终止，重启 Agent（保留上下文）
+  2. 信号丢失: 人工介入检查
 
 ## 系统架构
 ```
-┌─────────────────────────────────────────┐
-│           Manager Agent                 │
-│  ┌─────────┐ ┌─────────┐ ┌──────────┐ │
-│  │ 状态机  │ │ 调度器  │ │ 仲裁器   │ │
-│  │ Engine  │ │Scheduler│ │ Arbitrator│ │
-│  └────┬────┘ └────┬────┘ └────┬─────┘ │
-│       └─────────────┴───────────┘       │
-│              ┌─────────┐                │
-│              │ 事件总线 │                │
-│              │Event Bus│                │
-│              └────┬────┘                │
-└───────────────────┼─────────────────────┘
-                    │
-    ┌───────────────┼───────────────┐
-    ▼               ▼               ▼
-┌────────┐    ┌────────┐      ┌────────┐
-│Initial │───▶│Analyze │ ...  │  DT    │
-│ Agent  │    │ Agent  │      │ Agent  │
-└────────┘    └────────┘      └────────┘
+                                ┌─────────────┐
+                     .─────────▶│   Initial   │── .complete
+                     │          │   Agent     │
+                     │          └──────┬──────┘
+                     │                 .──▶┌─────────────┐
+                     │                 │   │   Analyze   │
+                     │                 │   │   Agent     │
+                     │                 │   └──┬──────────┘
+                     │                 │      │
+                     │                 └──────┼──────▶ .complete
+                     │                        │
+         ┌─────────────┐                      │
+         │    Coding   │◀─────────────────────│
+         │   Agent     │── .complete          ▼ 
+         └──────┬──────┘         ┌─────────────┐
+                │                │    Test     │
+                │                │   Agent     │
+                │                └─────┬───────┘
+                │                      │
+                │                      └─ .complete
+                │                        │
+                ▼                        ▼
+         ┌─────────────────────────────────┐
+         │         Compile Agent           │── .complete
+         └────────────┬────────────────────┘
+                      │
+                      ▼
+         ┌─────────────────────────────────┐
+         │           DT Agent              │── .complete
+         └────────────┬────────────────────┘
+                      │
+                      ▼
+         ┌─────────────────────────────────┐
+         │       Review                    │── COMPLETED
+         └────────────┬────────────────────┘
+                      │
+                      ▼
+         ┌─────────────────────────────────┐
+         │       Gardening                 │── COMPLETED
+         └─────────────────────────────────┘
+
+
+  状态机:
+  IDLE → CHECKING → ANALYZING → CODING ║ TEST → COMPILING → REVIEWING → DT → COMPLETED
 ```
 
 ## 状态机定义
@@ -61,7 +139,7 @@ states:
   - TESTING        # Test Agent 执行任务中
   - COMPILING      # Compile Agent 运行中
   - FIXING         # 修复中（循环）
-  - DEPLOY_TESTING # DT Agent 运行中
+  - DEVELOPER TESTING # DT Agent 运行中
   - REVIEWING      # 等待人工审查
   - COMPLETED      # 全部完成
   - FAILED         # 无法自动恢复的错误
@@ -78,9 +156,9 @@ transitions:
   (TESTING + CODING) → COMPILING: 两者均完成
   COMPILING → FIXING:        编译失败且重试 < 5
   FIXING → COMPILING:        修复完成
-  COMPILING → DEPLOY_TESTING: 编译通过
-  DEPLOY_TESTING → FIXING:    API 测试失败（逻辑错误）
-  DEPLOY_TESTING → REVIEWING: DT 报告生成（人工介入点）
+  COMPILING → DEVELOPER_TESTING: 编译通过
+  DEVELOPER_TESTING → FIXING:    API 测试失败（逻辑错误）
+  DEVELOPER_TESTING → REVIEWING:  测试成功，检视代码
   REVIEWING → COMPLETED:      人工确认通过
   REVIEWING → FIXING:        人工标记需修复
   any → FAILED:             重试耗尽或系统错误
@@ -100,7 +178,7 @@ task_status:
 
 ### TDD 执行模式
 
-> 测试驱动开发（TDD）：Test Agent 先于 Coding Agent 完成对应 TASK-T-*，因为测试精确到类名、方法名、输入输出类型和参数顺序
+> 测试驱动开发（TDD）：Test Agent 先于（或并行） Coding Agent 完成对应 TASK-T-*，因为测试精确到类名、方法名、输入输出类型和参数顺序
 
 #### 执行顺序（标准模式）
 1. **Test Agent** 执行 TASK-T-F001-01（测试用例） → 依赖 task.md 中定义的类名/方法名
@@ -125,12 +203,43 @@ TASK-T-F001-02 → TASK-C-F001-02
 | Agent 输出 | JSON/Markdown | 各 Agent 的 artifact 文件 |
 | 人工反馈 | UI/API | 审查意见、修复指令 |
 
+## 工件体系
+
+### 全局归档
+| 文件 | 路径 | 说明 |
+|------|------|------|
+| API 清单 | `artifacts/global/api_list.yaml` | 项目所有 API（全局，随需求更新） |
+| 数据模型 | `artifacts/global/data_model.yaml` | 项目所有模型（全局，随需求更新） |
+| 架构文档 | `artifacts/global/architecture.md` | 项目架构（全局） |
+
+### 需求归档（每个需求独立目录）
+对于需求命名为 `ADD-API-XXX`，创建目录：
+```
+artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
+├── feature_list.json
+├── coding_task.md
+├── test_task.md
+├── 03_coding/
+│   ├── code_files.json
+│   └── task_status.json
+├── 04_test/
+│   ├── test_files.json
+│   └── task_status.json
+├── 05_compile/
+│   └── compile_result.json
+├── 06_dt/
+│   └── dt_report.json
+└── 08_gardening/
+    ├── changelog.json
+    └── entropy_report.md
+```
+
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
 | 全局状态 | `artifacts/.state` | JSON | 当前状态和上下文 |
 | 执行日志 | `artifacts/.log` | 文本 | 时间线记录 |
-| 最终报告 | `artifacts/07_final/final_report.md` | Markdown | 项目交付总结 |
+| 最终报告 | `<demand-dir>/final_report.md` | Markdown | 需求交付总结 |
 
 ## 输出规范
 

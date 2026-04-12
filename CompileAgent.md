@@ -26,15 +26,15 @@ tools:
 ## 输入
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| 代码文件 | `artifacts/03_coding/code_files.json` | 待编译代码 |
-| 测试文件 | `artifacts/04_test/test_files.json` | 待运行测试 |
-| 架构文档 | `artifacts/01_initial/architecture.md` | 编译命令和约束 |
-| API 清单 | `artifacts/01_initial/api_list.yaml` | API 定义 |
+| 代码文件 | `{demand-dir}/03_coding/code_files.json` | 待编译代码 |
+| 测试文件 | `{demand-dir}/04_test/test_files.json` | 待运行测试 |
+| 架构文档 | `artifacts/global/architecture.md` | 编译命令和约束 |
+| API 清单 | `artifacts/global/api_list.yaml` | API 定义 |
 
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
-| 编译结果 | `artifacts/05_compile/compile_result.json` | JSON | 验证结果和反馈 |
+| 编译结果 | `{demand-dir}/05_compile/compile_result.json` | JSON | 验证结果和反馈 |
 
 ## 输出规范
 
@@ -181,5 +181,5 @@ pylint src/ --output-format=json
 
 ## 交接触发条件
 - compile_result.json 成功写入
-- 状态为 pass 时，触发信号：写入 `artifacts/05_compile/.complete`
-- 状态为 fix 时，触发信号：写入 `artifacts/05_compile/.needs_fix`，Coding Agent 自动接管
+- 状态为 pass 时，触发信号：写入 `{demand-dir}/.complete`
+- 状态为 fix 时，触发信号：写入 `{demand-dir}/.needs_fix`，Coding Agent 自动接管

@@ -32,23 +32,45 @@ tools:
 ## 输入
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| 代码文件 | `artifacts/03_coding/code_files.json` | 最新实现 |
-| 实现说明 | `artifacts/03_coding/implementation_notes.md` | 设计决策 |
-| API 测试报告 | `artifacts/06_dt/dt_report.json` | 实际接口行为（DT通过时） |
-| 架构文档 | `artifacts/01_initial/architecture.md` | 原始架构 |
-| API 清单 | `artifacts/01_initial/api_list.yaml` | API 定义 |
-| 数据模型 | `artifacts/01_initial/data_model.yaml` | 数据模型 |
-| 功能清单 | `artifacts/02_analyze/feature_list.json` | 功能定义 |
-| 现有 MEMORY.md | `MEMORY.md` | 当前知识库状态 |
-| 现有 README | `README.md` | 当前项目介绍 |
+| {demand-dir}/* | 当前需求目录（包含 coding+test+compile+dt 输出） | 当前需求完整输出 |
+| API 清单 | `artifacts/global/api_list.yaml` | API 定义（全局） |
+| 数据模型 | `artifacts/global/data_model.yaml` | 数据模型（全局） |
+| 架构文档 | `artifacts/global/architecture.md` | 原始架构（全局） |
+| 现有 MEMORY.md | `MEMORY.md` | 当前知识库状态（根目录） |
+| 现有 README | `README.md` | 当前项目介绍（根目录） |
 
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
-| 更新后的 README | `README.md` | Markdown | 项目总览 |
-| 更新后的 MEMORY | `MEMORY.md` | Markdown | 知识库 |
-| 文档变更日志 | `artifacts/08_gardening/changelog.json` | JSON | 变更记录 |
-| 熵检报告 | `artifacts/08_gardening/entropy_report.md` | Markdown | 健康度分析 |
+| 更新后的 README | `README.md` | Markdown | 项目总览（根目录） |
+| 更新后的 MEMORY | `MEMORY.md` | Markdown | 知识库（根目录） |
+| 文档变更日志 | `{demand-dir}/08_gardening/changelog.json` | JSON | 变更记录 |
+| 熵检报告 | `{demand-dir}/08_gardening/entropy_report.md` | Markdown | 健康度分析 |
+| 更新全局文件 | 更新全局 `api_list.yaml`, `data_model.yaml`, `architecture.md` | 更新全局信息（新增 API/模型） |
+
+## 归档职责
+Gardening 最后归档完成后，当前需求归档目录包含完整内容：
+```
+artifacts/artifact-{demand-name}-YYYY-mm-dd/
+├── feature_list.json
+├── coding_task.md
+├── test_task.md
+├── 03_coding/
+│   ├── code_files.json
+│   └── task_status.json
+├── 04_test/
+│   ├── test_files.json
+│   └── task_status.json
+├── 05_compile/
+│   └── compile_result.json
+├── 06_dt/
+│   └── dt_report.json
+├── 08_gardening/
+│   ├── changelog.json
+│   └── entropy_report.md
+├── final_report.md
+└── .complete
+```
 
 ## 输出规范
 
@@ -150,5 +172,6 @@ Entropy = (重复段落数 × 0.3) +
 ## 交接触发条件
 - 所有文档成功写入
 - changelog.json 和 entropy_report.md 生成
+- 更新了全局文件（api_list.yaml/data_model.yaml/architecture.md）
 - 熵值改善 > 0 或确认无改善空间
-- 触发信号：写入 `artifacts/08_gardening/.complete`
+- 触发信号：写入 `{demand-dir}/.complete`

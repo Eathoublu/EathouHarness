@@ -26,13 +26,15 @@ tools:
 ## 输入
 - 项目代码库路���（本地或远程仓库 URL）
 
-## 输出（三个独立文件）
+## 输出（三个全局基础文件）
 
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
-| API 清单 | `artifacts/01_initial/api_list.yaml` | YAML | 所有 API 接口定义 |
-| 数据模型 | `artifacts/01_initial/data_model.yaml` | YAML | 所有数据模型定义 |
-| 架构文档 | `artifacts/01_initial/architecture.md` | Markdown | 项目架构和约束 |
+| API 清单 | `artifacts/global/api_list.yaml` | YAML | 项目所有 API 接口定义（全局归档，随需求新增更新） |
+| 数据模型 | `artifacts/global/data_model.yaml` | YAML | 项目所有数据模型定义（全局归档，随需求新增更新） |
+| 架构文档 | `artifacts/global/architecture.md` | Markdown | 项目架构和约束（全局归档） |
+
+> 这三个文件是**全局基础信息**，每个新需求都会参考。当新增 API 或模型时，直接更新全局文件。
 
 > 只有三个文件都完备才生成 .complete 信号
 

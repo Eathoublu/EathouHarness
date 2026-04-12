@@ -27,16 +27,16 @@ tools:
 ## 输入
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| 编译结果 | `artifacts/05_compile/compile_result.json` | 确认代码已通过验证 |
-| 功能清单 | `artifacts/02_analyze/feature_list.json` | 预期功能和验收标准 |
-| API 清单 | `artifacts/01_initial/api_list.yaml` | API 契约定义 |
-| 数据模型 | `artifacts/01_initial/data_model.yaml` | 数据模型定义 |
-| 代码文件 | `artifacts/03_coding/code_files.json` | 实际接口实现参考 |
+| 编译结果 | `{demand-dir}/05_compile/compile_result.json` | 确认代码已通过验证 |
+| 功能清单 | `{demand-dir}/feature_list.json` | 预期功能和验收标准 |
+| API 清单 | `artifacts/global/api_list.yaml` | API 契约定义（全局） |
+| 数据模型 | `artifacts/global/data_model.yaml` | 数据模型定义（全局） |
+| 代码文件 | `{demand-dir}/03_coding/code_files.json` | 实际接口实现参考 |
 
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
-| API 测试报告 | `artifacts/06_dt/dt_report.json` | JSON | 端到端测试结果 |
+| API 测试报告 | `{demand-dir}/06_dt/dt_report.json` | JSON | 端到端测试结果 |
 
 ## 输出规范
 
@@ -229,6 +229,6 @@ python scripts/seed_test_data.py
 
 ## 交接触发条件
 - dt_report.json 成功写入
-- 状态为 PASS 时，触发信号：写入 `artifacts/06_dt/.complete`
-- 状态为 PARTIAL_PASS/FAIL 时，反馈 Coding Agent 修复
+- 状态为 PASS 时，触发信号：写入 `{demand-dir}/.complete`
+- 状态为 PARTIAL_PASS/FAIL 时，触发信号：写入 `{demand-dir}/.needs_fix`，反馈 Coding Agent 修复
 ```

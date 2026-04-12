@@ -24,16 +24,16 @@ tools:
 ## 输入
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| Test 任务 | `artifacts/02_analyze/test_task.md` | Test Agent 执行清单（TDD） |
-| 功能清单 | `artifacts/02_analyze/feature_list.json` | 当前 Sprint 的验收标准 |
-| 架构文档 | `artifacts/01_initial/architecture.md` | 测试框架和约束 |
-| API 清单 | `artifacts/01_initial/api_list.yaml` | API 定义 |
+| Test 任务 | `{demand-dir}/test_task.md` | Test Agent 执行清单（TDD） |
+| 功能清单 | `{demand-dir}/feature_list.json` | 当前需求的验收标准 |
+| 架构文档 | `artifacts/global/architecture.md` | 测试框架和约束（全局） |
+| API 清单 | `artifacts/global/api_list.yaml` | API 定义（全局） |
 
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
-| 测试文件 | `artifacts/04_test/test_files.json` | JSON | 测试代码清单 |
-| 任务状态 | `artifacts/04_test/task_status.json` | JSON | 已完成任务打勾状态 |
+| 测试文件 | `{demand-dir}/04_test/test_files.json` | JSON | 测试代码清单 |
+| 任务状态 | `{demand-dir}/04_test/task_status.json` | JSON | 已完成任务打勾状态 |
 
 ## 任务执行（TDD）
 

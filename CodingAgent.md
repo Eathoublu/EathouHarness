@@ -25,17 +25,17 @@ tools:
 ## 输入
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| Coding 任务 | `artifacts/02_analyze/coding_task.md` | Coding Agent 执行清单 |
-| 功能清单 | `artifacts/02_analyze/feature_list.json` | 当前 Sprint 任务 |
-| 架构文档 | `artifacts/01_initial/architecture.md` | 项目架构和约束 |
-| 数据模型 | `artifacts/01_initial/data_model.yaml` | 数据模型定义 |
-| 编译反馈 | `artifacts/05_compile/compile_result.json` | 修复指令（循环时） |
+| Coding 任务 | `{demand-dir}/coding_task.md` | Coding Agent 执行清单（在需求归档目录） |
+| 功能清单 | `{demand-dir}/feature_list.json` | 当前需求任务（在需求归档目录） |
+| 架构文档 | `artifacts/global/architecture.md` | 项目架构和约束（全局） |
+| 数据模型 | `artifacts/global/data_model.yaml` | 数据模型定义（全局） |
+| 编译反馈 | `{demand-dir}/05_compile/compile_result.json` | 修复指令（循环时） |
 
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |
 |------|------|------|------|
-| 代码文件 | `artifacts/03_coding/code_files.json` | JSON | 代码清单及内容 |
-| 任务状态 | `artifacts/03_coding/task_status.json` | JSON | 已完成任务打勾状态 |
+| 代码文件 | `{demand-dir}/03_coding/code_files.json` | JSON | 代码清单及内容 |
+| 任务状态 | `{demand-dir}/03_coding/task_status.json` | JSON | 已完成任务打勾状态 |
 
 ## 任务执行
 
