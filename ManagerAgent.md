@@ -109,11 +109,11 @@ tools:
 | DT | DTAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/07_dt/.complete` |
 | Gardening | GardeningAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/08_gardening/.complete` |
 
-### 检测逻辑
+### 检测逻辑（伪代码）
 ```python
 DEMAND_DIR = "artifacts/artifact-{demand}-{YYYY-mm-dd}"
 
-def check_complete(phase: int) -> bool:
+def check_complete(phase: str) -> bool:
     """检测指定阶段是否完成"""
     path = f"{DEMAND_DIR}/{phase:02d}_{phase_name}/.complete"
     return os.path.exists(path)
