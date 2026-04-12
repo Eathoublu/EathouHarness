@@ -344,7 +344,7 @@ artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
 - 覆盖率: 87% | 测试: 100% | 警告: 0
 
 ## 交付
-- 源码: `src/` | 测试: `tests/` | 文档: `docs/`
+- 源码: `src/` | 测试: `tests/`
 
 ## 后续
 - 压力测试 | 监控告警 | 超时取消
