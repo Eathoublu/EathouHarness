@@ -171,11 +171,11 @@ transitions:
   (TESTING + CODING) → COMPILING: 两者均完成
   COMPILING → FIXING:        编译失败，未达最大重试次数
   FIXING → COMPILING:        修复完成
-  COMPILING → DEVELOPER_TESTING: 编译通过
+  COMPILING → REVIEWING: 编译通过，检视代码
+  REVIEWING → FIXING:  检视出现问题，调用CODING agent继续完善
+  REVIEWING → DEVELOPER_TESTING:  测试成功，检视代码
   DEVELOPER_TESTING → FIXING:    API 测试失败（逻辑错误）
-  DEVELOPER_TESTING → REVIEWING:  测试成功，检视代码
-  REVIEWING → COMPLETED:      人工确认通过
-  REVIEWING → FIXING:        人工标记需修复
+  REVIEWING → COMPLETED:      确认通过，最终状态通过
   any → FAILED:             重试耗尽或系统错误
 ```
 
