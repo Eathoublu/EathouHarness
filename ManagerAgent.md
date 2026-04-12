@@ -81,6 +81,10 @@ tools:
 9. 循环直到完成或回退
 ```
 
+### .state 文件时机
+- **新需求启动前**：创建 `artifacts/.state`，设置 initial 状态
+- **每次状态更新后**：立即更新 .state（current_state + agents_status）
+
 ### 状态文件更新时机
 | 时机 | 更新内容 |
 |------|----------|
