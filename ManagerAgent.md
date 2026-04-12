@@ -54,7 +54,8 @@ tools:
 ```yaml
 states:
   - IDLE           # 等待启动
-  - INITIALIZING   # Initial Agent 运行中
+  - CHECKING       # 检查三个基础文件是否存在且完备
+  - INITIALIZING   # Initial Agent 运行中（当需要重新生成时）
   - ANALYZING      # Analyze Agent 运行中
   - CODING         # Coding Agent 执行任务中
   - TESTING        # Test Agent 执行任务中
@@ -66,8 +67,10 @@ states:
   - FAILED         # 无法自动恢复的错误
 
 transitions:
-  IDLE → INITIALIZING:         收到启动指令
-  INITIALIZING → ANALYZING:    检测到 .complete
+  IDLE → CHECKING:          收到用户需求，开始处理
+  CHECKING → ANALYZING:     三个基础文件完备，跳过 Initial
+  CHECKING → INITIALIZING:  三个文件缺失或不完备，触发 Initial
+  INITIALIZING → CHECKING:  Initial 完成，重新检查
   ANALYZING → TESTING:         task.md 完成，先执行 TDD 测试（TASK-T-*）
   ANALYZING → CODING:        TESTING 完成（或并行）
   TESTING → COMPILING:      TDD 测试完成（test_files.json）
@@ -139,8 +142,8 @@ TASK-T-F001-02 → TASK-C-F001-02
   "started_at": "2024-01-15T09:00:00Z",
   "current_sprint": "S1",
   "agents_status": {
-    "initial": {"status": "completed", "artifact": "project_summary.md"},
-    "analyze": {"status": "completed", "artifact": "feature_list.json"},
+    "initial": {"status": "completed", "artifact": "api_list.yaml + data_model.yaml + architecture.md"},
+    "analyze": {"status": "completed", "artifact": "feature_list.json + task.md"},
     "coding": {"status": "completed", "artifact": "code_files.json"},
     "test": {"status": "completed", "artifact": "test_files.json"},
     "compile": {"status": "running", "round": 2, "started_at": "..."},
@@ -169,8 +172,8 @@ TASK-T-F001-02 → TASK-C-F001-02
 ## 执行摘要
 | 阶段 | Agent | 耗时 | 状态 | 产出 |
 |------|-------|------|------|------|
-| 项目理解 | Initial | 30min | ✅ | project_summary.md |
-| 需求分析 | Analyze | 45min | ✅ | 3个Sprint, 8个Feature |
+| 项目理解 | Initial | 30min | ✅ | api_list.yaml + data_model.yaml + architecture.md |
+| 需求分析 | Analyze | 45min | ✅ | feature_list.json + task.md |
 | Sprint1 | Coding+Test+Compile | 2h | ✅ | 订单创建/查询功能 |
 | Sprint2 | Coding+Test+Compile | 2h | ✅ | 支付集成 |
 | Sprint3 | Coding+Test+Compile | 1.5h | ✅ | 管理后台 |
@@ -259,6 +262,6 @@ manager:
 ```
 
 ## 启动与终止
-- **启动**: 用户输入需求 → Manager Agent 初始化 → 触发 Initial Agent
+- **启动**: 用户输入需求 → Manager Agent 检查三个基础文件 → 如缺失则触发 Initial
 - **正常终止**: 所有 Sprint 完成 → DT 通过 → 人工确认 → 生成 final_report.md
 - **异常终止**: 重试耗尽 → 记录失败状态 → 通知人工 → 保留现场供调试

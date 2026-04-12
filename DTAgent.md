@@ -29,7 +29,8 @@ tools:
 |------|------|------|
 | 编译结果 | `artifacts/05_compile/compile_result.json` | 确认代码已通过验证 |
 | 功能清单 | `artifacts/02_analyze/feature_list.json` | 预期功能和验收标准 |
-| 项目总结 | `artifacts/01_initial/project_summary.md` | API 契约定义 |
+| API 清单 | `artifacts/01_initial/api_list.yaml` | API 契约定义 |
+| 数据模型 | `artifacts/01_initial/data_model.yaml` | 数据模型定义 |
 | 代码文件 | `artifacts/03_coding/code_files.json` | 实际接口实现参考 |
 
 ## 输出

@@ -1,5 +1,5 @@
 ---
-description: 测试执行专家。机械执行 task.md 中定义的测试设计，不做任何技术决策
+description: 测试执行专家。机械执行 test_task.md 中定义的测试设计，不做任何技术决策
 mode: subagent
 temperature: 0.1
 tools:
@@ -13,10 +13,10 @@ tools:
 # Test Agent
 
 ## 角色定义
-测试执行专家。机械执行 task.md 中定义的测试设计，不做任何技术决策。
+测试执行专家。机械执行 test_task.md 中定义的测试设计，不做任何技术决策。
 
 ## 核心职责
-- 严格按照 task.md 生成的测试用例实现
+- 严格按照 test_task.md 生成的测试用例实现
 - 生成符合项目测试框架的 UT 代码
 - 确保测试覆盖正常路径、边界条件、异常场景
 - 响应 Compile Agent 的修复反馈
@@ -24,9 +24,10 @@ tools:
 ## 输入
 | 文件 | 路径 | 说明 |
 |------|------|------|
-| 任务清单 | `artifacts/02_analyze/task.md` | 精确到方法的测试设计 |
+| Test 任务 | `artifacts/02_analyze/test_task.md` | Test Agent 执行清单（TDD） |
 | 功能清单 | `artifacts/02_analyze/feature_list.json` | 当前 Sprint 的验收标准 |
-| 项目总结 | `artifacts/01_initial/project_summary.md` | 测试框架和约束 |
+| 架构文档 | `artifacts/01_initial/architecture.md` | 测试框架和约束 |
+| API 清单 | `artifacts/01_initial/api_list.yaml` | API 定义 |
 
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |
@@ -39,7 +40,7 @@ tools:
 > TDD 原理：先写测试用例精确到类名、方法名、输入输出类型和参数顺序，再驱动Coding实现
 
 ### 执行流程
-1. 读取 task.md，提取所有 TASK-T-* 任务
+1. 读取 test_task.md，提取所有 TASK-T-* 任务
 2. **TDD**：每个测试必须精确到：
    - 测试类名（如 `TestOrderService`）
    - 测试方法名（如 `test_create_order_success`）

@@ -28,7 +28,8 @@ tools:
 |------|------|------|
 | 代码文件 | `artifacts/03_coding/code_files.json` | 待编译代码 |
 | 测试文件 | `artifacts/04_test/test_files.json` | 待运行测试 |
-| 项目总结 | `artifacts/01_initial/project_summary.md` | 编译命令和约束 |
+| 架构文档 | `artifacts/01_initial/architecture.md` | 编译命令和约束 |
+| API 清单 | `artifacts/01_initial/api_list.yaml` | API 定义 |
 
 ## 输出
 | 文件 | 路径 | 格式 | 说明 |

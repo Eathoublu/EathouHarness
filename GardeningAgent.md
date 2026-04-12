@@ -35,7 +35,9 @@ tools:
 | 代码文件 | `artifacts/03_coding/code_files.json` | 最新实现 |
 | 实现说明 | `artifacts/03_coding/implementation_notes.md` | 设计决策 |
 | API 测试报告 | `artifacts/06_dt/dt_report.json` | 实际接口行为（DT通过时） |
-| 项目总结 | `artifacts/01_initial/project_summary.md` | 原始架构 |
+| 架构文档 | `artifacts/01_initial/architecture.md` | 原始架构 |
+| API 清单 | `artifacts/01_initial/api_list.yaml` | API 定义 |
+| 数据模型 | `artifacts/01_initial/data_model.yaml` | 数据模型 |
 | 功能清单 | `artifacts/02_analyze/feature_list.json` | 功能定义 |
 | 现有 MEMORY.md | `MEMORY.md` | 当前知识库状态 |
 | 现有 README | `README.md` | 当前项目介绍 |
