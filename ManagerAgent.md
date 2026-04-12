@@ -24,6 +24,61 @@ tools:
 - 维护全局状态机
 - 生成最终项目交付报告
 
+## ManagerAgent 行动指南
+
+### 各阶段调用方式
+| 阶段 | Subagent | 触发方式 | 输入产物 |
+|------|---------|---------|---------|----------|
+| CHECK | - | 检查 artifacts/global/ | api_list.yaml, data_model.yaml, architecture.md |
+| INITIALIZING | InitialAgent | 提示词启动 | "请生成项目基础文件：api_list.yaml, data_model.yaml, architecture.md" |
+| ANALYZING | AnalyzeAgent | 提示词启动 | 用户需求 |
+| CODING║TEST | CodingAgent / TestAgent | 并行提示词启动 | coding_task.md / test_task.md |
+| COMPILING | CompileAgent | 提示词启动 | code_files.json + test_files.json |
+| REVIEWING | ReviewingAgent | 提示词启动 | 代码产物 |
+| DEVELOPER_TESTING | DTAgent | 提示词启动 | 编译产物 |
+| GARDENING | GardeningAgent | 提示词启动 | 最终产物 |
+
+### 调用 prompt 模板
+```markdown
+## 任务：{阶段}
+需求：{demand-name}
+日期：{YYYY-mm-dd}
+
+## 输入
+- 需求描述：{用户需求}
+- 相关文件：{路径列表}
+
+## 产出要求
+请生成/完成：{产物列表}
+路径：{输出目录}
+```
+
+### 状态恢复（中断后）
+```
+恢复流程:
+1. 读取 artifacts/.state 获取 current_state
+2. 检查对应阶段的 .complete 是否存在且包含 "approve:"
+3. 若 .complete 存在:
+   - 验证产出物有效性
+   - 进入下一阶段
+4. 若 .complete 不存在或无效:
+   - 检查 retry 次数
+   - 重试 → 重新调用对应 Subagent
+5. 若重试耗尽 → 人工介入
+```
+
+### 继续推动流程
+```
+推动逻辑:
+1. 当前阶段完成（验证通过）
+2. 确定下一阶段
+3. 准备 prompt（包含需求、上下文）
+4. 调用对应 Subagent
+5. 轮询等待 .complete 信号
+6. 验证产出物
+7. 循环直到完成或回退
+```
+
 ## 信号检测机制
 
 ### .complete 文件约定
@@ -32,15 +87,15 @@ tools:
 - **位置**: 各阶段产物目录（位于需求目录下）
 - **需求目录**: `artifacts/artifact-{demand}-{YYYY-mm-dd}/`
 
-| 阶段 | 路径 |
-|------|------|
-| Initial | `artifacts/global/.complete` |
-| Analyze | `artifacts/artifact-{demand}-{YYYY-mm-dd}/02_analyze/.complete` |
-| Coding | `artifacts/artifact-{demand}-{YYYY-mm-dd}/03_coding/.complete` |
-| Test | `artifacts/artifact-{demand}-{YYYY-mm-dd}/04_test/.complete` |
-| Compile | `artifacts/artifact-{demand}-{YYYY-mm-dd}/05_compile/.complete` |
-| DT | `artifacts/artifact-{demand}-{YYYY-mm-dd}/06_dt/.complete` |
-| Gardening | `artifacts/artifact-{demand}-{YYYY-mm-dd}/08_gardening/.complete` |
+| 阶段 | Subagent | 路径 |
+|------|----------|------|
+| Initial | InitialAgent | `artifacts/global/.complete` |
+| Analyze | AnalyzeAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/02_analyze/.complete` |
+| Coding | CodingAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/03_coding/.complete` |
+| Test | TestAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/04_test/.complete` |
+| Compile | CompileAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/05_compile/.complete` |
+| DT | DTAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/06_dt/.complete` |
+| Gardening | GardeningAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/08_gardening/.complete` |
 
 ### 检测逻辑
 ```python
