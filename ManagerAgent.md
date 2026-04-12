@@ -35,7 +35,7 @@ tools:
 | CODING║TEST | CodingAgent / TestAgent | 并行提示词启动 | coding_task.md / test_task.md |
 | COMPILING | CompileAgent | 提示词启动 | code_files.json + test_files.json |
 | REVIEWING | ReviewingAgent | 提示词启动 | 代码产物 |
-| DEVELOPER_TESTING | DTAgent | 提示词启动 | 编译产物 |
+| DT | DTAgent | 提示词启动 | 编译产物 |
 | GARDENING | GardeningAgent | 提示词启动 | 最终产物 |
 
 ### 调用 prompt 模板
@@ -105,14 +105,17 @@ tools:
 | Coding | CodingAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/03_coding/.complete` |
 | Test | TestAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/04_test/.complete` |
 | Compile | CompileAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/05_compile/.complete` |
-| DT | DTAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/06_dt/.complete` |
+| Reviewing | ReviewingAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/06_reviewing/.complete` |
+| DT | DTAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/07_dt/.complete` |
 | Gardening | GardeningAgent | `artifacts/artifact-{demand}-{YYYY-mm-dd}/08_gardening/.complete` |
 
 ### 检测逻辑
 ```python
-def check_complete(phase: str) -> bool:
+DEMAND_DIR = "artifacts/artifact-{demand}-{YYYY-mm-dd}"
+
+def check_complete(phase: int) -> bool:
     """检测指定阶段是否完成"""
-    path = f"artifacts/{phase}/.complete"
+    path = f"{DEMAND_DIR}/{phase:02d}_{phase_name}/.complete"
     return os.path.exists(path)
 
 def wait_for_complete(phase: str, timeout: int = 3600) -> bool:
@@ -137,26 +140,10 @@ TESTING → COMPILING:    检测 04_test/.complete 存在 → 触发 Compile
 COMPILING → FIXING:      编译失败且重试 < max_retries
 COMPILING → REVIEWING:   编译通过 → ReviewingAgent 审查代码
 REVIEWING → FIXING:      审查不通过 → 责令 CodingAgent 修复
-REVIEWING → DEVELOPER_TESTING: 审查通过 → 启动应用测试
-DEVELOPER_TESTING → FIXING:   DT 失败 → 修复代码
-DEVELOPER_TESTING → GARDENING: DT 通过 → 归档
+REVIEWING → DT: 审查通过 → 启动应用测试
+DT → FIXING:   DT 失败 → 修复代码
+DT → GARDENING: DT 通过 → 归档
 GARDENING → COMPLETED:   归档完成 → 交付
-```
-
-### .complete 验证机制
-Subagent 完成任务后生成空的 `.complete` 文件作为信号。ManagerAgent 获取信号后，必须验证任务是否真正完成：
-
-```
-验证流程:
-1. Subagent 生成 .complete → 通知 Manager
-2. Manager 检查产出物是否符合预期（artifact 文件存在且内容有效）
-3. 若验证通过:
-   - 在 .complete 中写入 "approve: {timestamp}"
-   - 进入下一阶段
-4. 若验证不通过:
-   - 删除 .complete 文件
-   - 责令 Subagent 继续工作
-   - 记录一次 retry
 ```
 
 ### 各阶段完成判断标准
@@ -164,12 +151,38 @@ Subagent 完成任务后生成空的 `.complete` 文件作为信号。ManagerAge
 |------|----------|----------|----------|
 | Initial | api_list.yaml + data_model.yaml + architecture.md 存在且非空 | 文件存在 + 内容解析成功 | 责令 InitialAgent: "补充缺失内容: {缺失项}" |
 | Analyze | feature_list.json + coding_task.md + test_task.md 存在 | 文件存在 + JSON 有效 | 责令 AnalyzeAgent: "补充分析: {缺失项}" |
-| Coding | code_files.json 包含所有 TASK-C-* 实现 | 数量 = task 中的任务数 | 责令 CodingAgent: "完成 TASK-C-*: {未完成任务列表}" |
-| Test | test_files.json 包含所有 TASK-T-* 测试 | 数量 = task 中的任务数 | 责令 TestAgent: "补充测试 TASK-T-*: {未完成列表}" |
+| Coding | code_files.json 包含所有 TASK-C-* 实现 | coding_task.md 中所有 [ ] 变成 [x] | 责令 CodingAgent: "完成 TASK-C-*: {未完成任务列表}" |
+| Test | test_files.json 包含所有 TASK-T-* 测试 | test_task.md 中所有 [ ] 变成 [x] | 责令 TestAgent: "补充测试 TASK-T-*: {未完成列表}" |
 | Compile | compile_result.json pass + 命令 + 输出 | status==pass 且包含命令和输出 | 责令 CodingAgent: "修复编译错误: {错误信息}" |
-| Reviewing | review_report.json pass | 通过代码审查，无严重问题 | 责令 CodingAgent: "修复代码问题: {问题列表}" |
+| Reviewing | review_report.json pass + issue.json | issue.json 中严重问题 = 0 | 责令 CodingAgent: "修复代码问题: {问题列表}" |
 | DT | dt_report.json pass_rate==100% | pass_rate=100% | 责令 CodingAgent/TestAgent: "修复 DT 失败: {失败场景}" |
 | Gardening | final_report.md + changelog.json 存在 | 文件存在 | 责令 GardeningAgent: "补充归档: {缺失项}" |
+
+### Reviewing 审查标准
+审查要点：
+- **严重**：影响代码运行逻辑、健壮性的硬性问题，必须清零
+- **提示**：代码风格、注释等建议性内容
+- **一般**：介于严重和提示之间
+
+issue.json 格式：
+```json
+{
+  "review_report": {
+    "status": "pass",
+    "severe_count": 0,
+    "normal_count": 2,
+    "info_count": 5
+  },
+  "issues": [
+    {
+      "type": "severe",
+      "description": "内存泄漏：第 45 行未释放资源",
+      "location": "src/main.go:45"
+    }
+  ]
+}
+```
+- status = pass 当且仅当 severe_count == 0
 
 ### Compile 产出规范
 compile_result.json 必须包含：
@@ -207,7 +220,7 @@ compile_result.json 必须包含：
 ```
 场景: Reviewing 阶段失败
 
-1. ReviewingAgent 完成 → review_report.json 标记问题
+1. ReviewingAgent 完成 → review_report.json + issue.json 标记问题
 2. 验证不通过 → 删除 06_reviewing/.complete
 3. 状态回退:
    artifacts/.state:
@@ -274,7 +287,7 @@ states:
   - COMPILING      # Compile Agent 运行中
   - FIXING         # 修复中（循环）
   - REVIEWING      # 审查代码
-  - DEVELOPER_TESTING # 启动应用测试
+  - DT           # 应用测试
   - GARDENING     # 归档完成
   - COMPLETED      # 全部完成
   - FAILED         # 无法自动恢复的错误
@@ -291,9 +304,9 @@ transitions:
   FIXING → COMPILING:        修复完成
   COMPILING → REVIEWING:   编译通过，ReviewingAgent 审查代码
   REVIEWING → FIXING:      审查不通过，责令 CodingAgent 修复
-  REVIEWING → DEVELOPER_TESTING:  审查通过，启动应用测试
-  DEVELOPER_TESTING → FIXING:   DT 失败，修复代码
-  DEVELOPER_TESTING → GARDENING: DT 通过，触发归档
+  REVIEWING → DT:  审查通过，启动应用测试
+  DT → FIXING:   DT 失败，修复代码
+  DT → GARDENING: DT 通过，触发归档
   GARDENING → COMPLETED:   归档完成，交付
   any → FAILED:             重试耗尽或系统错误
 ```
@@ -354,9 +367,8 @@ CODING(TASK-C-*) ║ TEST(TASK-T-*)  # 并行执行
 | 架构文档 | `artifacts/global/architecture.md` | 项目架构（全局） |
 
 ### 需求归档（每个需求独立目录）
-对于需求命名为 `ADD-API-XXX`，创建目录：
 ```
-artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
+artifacts/artifact-{demand}-{YYYY-mm-dd}/
 ├── 02_analyze/
 │   ├── feature_list.json
 │   ├── coding_task.md
@@ -369,11 +381,14 @@ artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
 │   └── task_status.json
 ├── 05_compile/
 │   └── compile_result.json
-├── 06_dt/
+├── 06_reviewing/
+│   ├── review_report.json
+│   └── issue.json
+├── 07_dt/
 │   └── dt_report.json
 └── 08_gardening/
-    ├── changelog.json
-    └── entropy_report.md
+    ├── final_report.md
+    └── changelog.json
 ```
 
 ## 输出
@@ -388,24 +403,26 @@ artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
 ### .state（运行时状态）
 ```json
 {
+  "demand_dir": "artifacts/artifact-{demand}-{YYYY-mm-dd}",
   "project_id": "proj-20240115-001",
   "current_state": "COMPILING",
   "started_at": "2024-01-15T09:00:00Z",
-  "current_sprint": "S1",
   "agents_status": {
-    "initial": {"status": "completed", "artifact": "api_list.yaml + data_model.yaml + architecture.md"},
-    "analyze": {"status": "completed", "artifact": "feature_list.json + coding_task.md + test_task.md"},
-    "coding": {"status": "completed", "artifact": "code_files.json"},
-    "test": {"status": "completed", "artifact": "test_files.json"},
+    "initial": {"status": "completed", "artifact": "artifacts/global/..."},
+    "analyze": {"status": "completed", "artifact": "02_analyze/..."},
+    "coding": {"status": "completed", "artifact": "03_coding/..."},
+    "test": {"status": "completed", "artifact": "04_test/..."},
     "compile": {"status": "running", "round": 2, "started_at": "..."},
-    "dt": {"status": "pending"}
+    "reviewing": {"status": "pending"},
+    "dt": {"status": "pending"},
+    "gardening": {"status": "pending"}
   },
   "retry_counters": {
     "compile_fix": 2,
+    "review_fix": 1,
     "dt_fix": 0
   },
   "blockers": [],
-  "human_review_required": false,
   "estimated_completion": "2024-01-15T16:00:00Z"
 }
 ```
