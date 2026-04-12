@@ -29,17 +29,18 @@ tools:
 ### .complete 文件约定
 - **内容**: 空文件（仅作为信号标记）
 - **命名**: `.complete`
-- **位置**: 各阶段产物目录
+- **位置**: 各阶段产物目录（位于需求目录下）
+- **需求目录**: `artifacts/artifact-{demand}-{YYYY-mm-dd}/`
 
 | 阶段 | 路径 |
 |------|------|
 | Initial | `artifacts/01_initial/.complete` |
-| Analyze | `artifacts/02_analyze/.complete` |
-| Coding | `artifacts/03_coding/.complete` |
-| Test | `artifacts/04_test/.complete` |
-| Compile | `artifacts/05_compile/.complete` |
-| DT | `artifacts/06_dt/.complete` |
-| Gardening | `artifacts/08_gardening/.complete` |
+| Analyze | `artifacts/artifact-{demand}-{YYYY-mm-dd}/02_analyze/.complete` |
+| Coding | `artifacts/artifact-{demand}-{YYYY-mm-dd}/03_coding/.complete` |
+| Test | `artifacts/artifact-{demand}-{YYYY-mm-dd}/04_test/.complete` |
+| Compile | `artifacts/artifact-{demand}-{YYYY-mm-dd}/05_compile/.complete` |
+| DT | `artifacts/artifact-{demand}-{YYYY-mm-dd}/06_dt/.complete` |
+| Gardening | `artifacts/artifact-{demand}-{YYYY-mm-dd}/08_gardening/.complete` |
 
 ### 检测逻辑
 ```python
