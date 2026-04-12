@@ -90,14 +90,29 @@ Subagent 完成任务后生成空的 `.complete` 文件作为信号。ManagerAge
 ```
 
 ### 各阶段完成判断标准
-| 阶段 | 完成标准 | 验证方式 |
-|------|----------|----------|
-| Initial | api_list.yaml + data_model.yaml + architecture.md 存在且非空 | 文件存在 + 内容解析成功 |
-| Analyze | feature_list.json + coding_task.md + test_task.md 存在 | 文件存在 + JSON 有效 |
-| Coding | code_files.json 包含所有 TASK-C-* 实现 | 数量 = task 中的任务数 |
-| Test | test_files.json 包含所有 TASK-T-* 测试 | 数量 = task 中的任务数 |
-| Compile | compile_result.json 报告显示通过 | status == "pass" |
-| DT | dt_report.json 显示所有场景通过 | pass_rate == 100% |
+| 阶段 | 完成标准 | 验证方式 | 回退方式 |
+|------|----------|----------|----------|
+| Initial | api_list.yaml + data_model.yaml + architecture.md 存在且非空 | 文件存在 + 内容解析成功 | 责令 InitialAgent: "补充缺失内容: {缺失项}" |
+| Analyze | feature_list.json + coding_task.md + test_task.md 存在 | 文件存在 + JSON 有效 | 责令 AnalyzeAgent: "补充分析: {缺失项}" |
+| Coding | code_files.json 包含所有 TASK-C-* 实现 | 数量 = task 中的任务数 | 责令 CodingAgent: "完成 TASK-C-*: {未完成任务列表}" |
+| Test | test_files.json 包含所有 TASK-T-* 测试 | 数量 = task 中的任务数 | 责令 TestAgent: "补充测试 TASK-T-*: {未完成列表}" |
+| Compile | compile_result.json pass + 命令 + 输出 | status==pass 且包含命令和输出 | 责令 CodingAgent: "修复编译错误: {错误信息}" |
+| DT | dt_report.json pass_rate==100% | pass_rate=100% | 责令 CodingAgent/TestAgent: "修复 DT 失败: {失败场景}" |
+
+### Compile 产出规范
+compile_result.json 必须包含：
+```json
+{
+  "status": "pass",
+  "command": "go build -o app ./src",
+  "output": "go: downloading modules...\ngo: building...\nBuild successful. Size: 2.3MB",
+  "warnings": 0,
+  "errors": 0
+}
+```
+- **command**: 实际执行的编译命令
+- **output**: 控制台输出（仅重要部分，无错误信息）
+- **warnings/errors**: 统计数量
 
 ### 回退机制（判定未完成）
 ```
@@ -108,11 +123,7 @@ Subagent 完成任务后生成空的 `.complete` 文件作为信号。ManagerAge
 4. 若验证不通过:
    - 删除 .complete
    - 记录 retry + 1
-   - 责令对应 Agent 继续工作:
-     * Coding 未完成 → 责令 CodingAgent 继续
-     * Test 未完成 → 责令 TestAgent 继续
-     * Compile 未通过 → 责令 CodingAgent 修复代码
-     * DT 未通过 → 责令 CodingAgent 或 TestAgent 修复
+   - 责令对应 Agent 继续工作（明确告知缺失项）
    - 重试次数超过上限 → 人工介入
 ```
 
@@ -376,5 +387,5 @@ manager:
 
 ## 启动与终止
 - **启动**: 用户输入需求 → Manager Agent 检查三个基础文件 → 如缺失则触发 Initial
-- **正常终止**: 所有 Sprint 完成 → DT 通过 → 人工确认 → 生成 final_report.md
+- **正常终止**: 所有 Sprint 完成 → DT 通过 → 生成 final_report.md
 - **异常终止**: 重试耗尽 → 记录失败状态 → 通知人工 → 保留现场供调试
