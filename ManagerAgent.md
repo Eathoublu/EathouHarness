@@ -89,6 +89,33 @@ Subagent 完成任务后生成空的 `.complete` 文件作为信号。ManagerAge
    - 记录一次 retry
 ```
 
+### 各阶段完成判断标准
+| 阶段 | 完成标准 | 验证方式 |
+|------|----------|----------|
+| Initial | api_list.yaml + data_model.yaml + architecture.md 存在且非空 | 文件存在 + 内容解析成功 |
+| Analyze | feature_list.json + coding_task.md + test_task.md 存在 | 文件存在 + JSON 有效 |
+| Coding | code_files.json 包含所有 TASK-C-* 实现 | 数量 = task 中的任务数 |
+| Test | test_files.json 包含所有 TASK-T-* 测试 | 数量 = task 中的任务数 |
+| Compile | compile_result.json 报告显示通过 | status == "pass" |
+| DT | dt_report.json 显示所有场景通过 | pass_rate == 100% |
+
+### 回退机制（判定未完成）
+```
+判定流程:
+1. Manager 检测到 .complete 信号
+2. 按上表验证产出物
+3. 若验证通过 → .complete 写入 "approve: {timestamp}"
+4. 若验证不通过:
+   - 删除 .complete
+   - 记录 retry + 1
+   - 责令对应 Agent 继续工作:
+     * Coding 未完成 → 责令 CodingAgent 继续
+     * Test 未完成 → 责令 TestAgent 继续
+     * Compile 未通过 → 责令 CodingAgent 修复代码
+     * DT 未通过 → 责令 CodingAgent 或 TestAgent 修复
+   - 重试次数超过上限 → 人工介入
+```
+
 ### 超时处理
 - 各阶段默认超时时间见配置参数
 - 超时后执行策略：
@@ -326,6 +353,8 @@ artifacts/artifact-ADD-API-XXX-YYYY-mm-dd/
 manager:
   polling_interval: 5  # 秒
   max_retries:
+    coding: 5
+    test: 5
     compile: 10
     dt: 10
   timeouts:
