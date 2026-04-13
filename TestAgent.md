@@ -46,7 +46,7 @@ tools:
 ## 执行流程
 1. 读取 test_task.md
 2. 按任务顺序编写测试
-3. 每完成一个任务更新 task.md 中的 `[ ]` 为 `[x]`
+3. 每完成一个任务更新 test_task.md 中的 `[ ]` 为 `[x]`
 4. 生成 test_files.json
 5. 生成 `.complete` 信号
 

@@ -236,9 +236,9 @@ def wait_for_complete(phase: str, timeout: int = 3600) -> bool:
 | Analyze | feature_list.json + coding_task.md + test_task.md 存在 | 文件存在 + JSON 有效 | 责令 AnalyzeAgent: "补充分析: {缺失项}" |
 | Coding | code_files.json 包含所有 TASK-C-* 实现 | coding_task.md 中所有 [ ] 变成 [x] | 责令 CodingAgent: "完成 TASK-C-*: {未完成任务列表}" |
 | Test | test_files.json 包含所有 TASK-T-* 测试 | test_task.md 中所有 [ ] 变成 [x] | 责令 TestAgent: "补充测试 TASK-T-*: {未完成列表}" |
-| Compile | compile_result.json pass + 命令 + 输出 | status==pass 且包含命令和输出 | 责令 CodingAgent: "修复编译错误: {错误信息}" |
-| Reviewing | review_report.json pass + issue.json | issue.json 中严重问题 = 0 | 责令 CodingAgent: "修复代码问题: {问题列表}" |
-| DT | dt_report.json pass_rate==100% | pass_rate=100% | 责令 CodingAgent/TestAgent: "修复 DT 失败: {失败场景}" |
+| Compile | compile_result.json pass + 命令 + 输出 | status==pass 且包含命令和输出 | **在 coding_task.md 添加修复任务**，然后责令 CodingAgent: "完成 coding_task.md 中的修复任务" |
+| Reviewing | review_report.json pass + coding_task.md 无新增任务 | coding_task.md 所有任务完成且无新的修复任务 | **在 coding_task.md 添加修复任务**，然后责令 CodingAgent: "完成 coding_task.md 中的修复任务" |
+| DT | dt_report.json pass_rate==100% | pass_rate=100% | **在 coding_task.md 添加修复任务**，然后责令 CodingAgent: "完成 coding_task.md 中的修复任务" |
 | Gardening | final_report.md + changelog.json 存在 | 文件存在 | 责令 GardeningAgent: "补充归档: {缺失项}" |
 
 ### Reviewing 审查标准
