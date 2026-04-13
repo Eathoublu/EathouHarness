@@ -23,6 +23,8 @@ tools:
 ## 输出路径
 `artifacts/artifact-{demand}-{YYYY-mm-dd}/04_test/`
 - test_files.json
+- .complete
+·./·(项目根目录)
 - 测试文件
 
 ## 产出规范
