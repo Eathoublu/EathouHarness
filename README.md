@@ -2,13 +2,27 @@
 
 > 多 Agent 协作系统。需求入口 → 编码 → 测试 → 编译 → 审查 → 部署测试 → 归档交付。
 
+## 架构更新 (2026-04-14)
+
+本次更新重构了各 Agent 的职责边界，优化了工作流，增强了错误处理机制和上下文管理能力。
+
+### 核心变更
+
+1. **ManagerAgent**: 强化编排逻辑，增加全局上下文管理
+2. **CompileAgent**: 完善编译任务处理，支持详细报告生成
+3. **DTAgent**: 增强部署测试能力，支持错误诊断
+4. **ReviewingAgent**: 优化代码审查流程，支持多种严重级别问题分类
+5. **TestAgent**: 改进测试生成逻辑，支持上下文感知
+
+---
+
 ## 一目了然
 
 ```
 用户需求 → Manager → Initial → Analyze → CODING ║ TEST → Compile → Review → DT → Gardening → 交付
 ```
 
-- **Manager**：编排中枢，调度所有 Agent
+- **Manager**：编排中枢，调度所有 Agent，管理全局上下文
 - **Initial**：初始化，扫描生成全局基础文件（API列表、数据模型、架构文档）
 - **Analyze**：需求分析，拆解为 feature → 精确task
 - **Coding**：按 task 实现代码
@@ -18,9 +32,12 @@
 - **DT**：启动应用，验证 API 功能
 - **Gardening**：归档整理，更新全局文件
 
+---
+
 ## 核心流程
 
 ### 流程图（Mermaid）
+
 ```mermaid
 flowchart TD
     START([IDLE]) --> CHECK{CHECKING}
@@ -53,9 +70,13 @@ flowchart TD
 ```
 
 ### TDD 变体
+
 Coding 和 Test **并行**执行，基于 Analyze 输出的精确 task：
+
 - Coding 按 coding_task.md 实现（精确到类路径、方法名、出入参）
 - Test 按 test_task.md 编写测试（精确到断言条件）
+
+---
 
 ## 文件结构
 
@@ -78,11 +99,15 @@ artifacts/
     └── 08_gardening/       # 归档
 ```
 
+---
+
 ## 信号机制
 
 - `.complete`：各阶段完成信号（空文件）
 - 验证通过后 Manager 写入 `approve: timestamp`
 - 验证不通过：删除信号，责令 Agent 继续
+
+---
 
 ## 完成标准
 
@@ -97,44 +122,58 @@ artifacts/
 | DT | pass_rate = 100% |
 | Gardening | final_report.md + changelog.json |
 
+---
+
 ## Review 审查标准
 
 - **严重**：影响运行逻辑/健壮性 → 必须清零
 - **一般**：代码规范问题
 - **提示**：风格建议
 
+---
+
 ## Harness 思想
 
 ### 1. 强制执行验证
+
 - 关键阶段**必须执行命令**并获取控制台输出
 - Compile 记录编译命令 + 输出（无错误的关键部分）
 - DT 调用 API，记录实际响应
 - 所有输出可追溯、可验证
 
 ### 2. 任务闭环
+
 - task.md 中所有 `[ ]` 必须打勾变成 `[x]`
 - Manager 验证：统计所有 TASK 标记，未完成则继续
 
 ### 3. 上下文完备
+
 - 项目上下文必须完备才能开工
 - Initial 扫描生成 global 文件（API/模型/架构）
 - Analyze 解析 feature + 精确 task
 - 上下文缺失 → 返回上一步补充
 
 ### 4. 汇报机制
+
 - 所有 Subagent 由 Manager 创建
 - 完成后向 Manager 汇报（生成 .complete 信号）
 - Manager 验证通过才进入下一阶段
 
+---
+
 ## DT 测试用例设计
 
 基于 feature 设计，每个 feature 包含：
+
 - 正向用例（期望成功）
 - 负向用例（期望失败：参数错误、权限等）
+
+---
 
 ## 状态文件
 
 `artifacts/.state` 记录当前状态：
+
 - current_state: 阶段名
 - agents_status: 各 Agent 完成状态
 - retry_counters: 重试计数
@@ -144,12 +183,30 @@ artifacts/
 ## 各 Agent 定义
 
 见同名 .md 文件：
-- `ManagerAgent.md` - 编排定义
+
+- `ManagerAgent.md` - 编排定义（已更新：强化上下文管理和错误处理）
 - `InitialAgent.md` - 初始化定义
 - `AnalyzeAgent.md` - 需求分析定义
 - `CodingAgent.md` - 编码定义
-- `TestAgent.md` - 测试定义
-- `CompileAgent.md` - 编译定义
-- `ReviewingAgent.md` - 审查定义
-- `DTAgent.md` - 部署测试定义
+- `TestAgent.md` - 测试定义（已更新：增强测试生成和上下文感知）
+- `CompileAgent.md` - 编译定义（已更新：完善编译流程和报告）
+- `ReviewingAgent.md` - 审查定义（已更新：优化审查流程和分类）
+- `DTAgent.md` - 部署测试定义（已更新：增强测试和诊断能力）
 - `GardeningAgent.md` - 归档定义
+
+---
+
+## 更新日志
+
+### 2026-04-14
+
+- **ManagerAgent**: 增强编排逻辑，优化全局上下文管理，完善错误处理机制
+- **CompileAgent**: 完善编译任务处理流程，增强编译报告生成
+- **DTAgent**: 强化部署测试能力，增加错误诊断和日志分析
+- **ReviewingAgent**: 优化代码审查流程，完善问题分类（严重/一般/提示）
+- **TestAgent**: 改进测试生成逻辑，增强上下文感知能力
+- **整体**: 优化各 Agent 职责边界，增强工作流的健壮性
+
+---
+
+*最后更新: 2026-04-14*
