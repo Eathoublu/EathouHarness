@@ -46,9 +46,9 @@ tools:
 ## 执行流程
 1. 读取 test_task.md
 2. 按任务顺序编写测试
-3. 每完成一个任务更新 test_task.md 中的 `[ ]` 为 `[x]`
-4. 生成 test_files.json
-5. 生成 `.complete` 信号
+3. 每完成一个任务更新 test_task.md 中的 `[ ]` 为 `[x]`（每完成一个任务均要标记一次，而不是等到最后才标记）
+4. 所有test_task.md中的任务均完成且标记后，生成 test_files.json
+5. 所有test_task.md中的任务均完成且标记后，生成 `.complete` 信号
 
 ## 上下游
 - 上游：AnalyzeAgent（触发）
