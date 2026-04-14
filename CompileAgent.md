@@ -54,6 +54,20 @@ tools:
 - 上游：CodingAgent + TestAgent
 - 下游：ReviewingAgent
 
+## 修复任务添加规范
+
+当编译失败时，必须在 coding_task.md 中添加修复任务：
+
+```markdown
+## 编译修复任务
+- [ ] TASK-FIX-C001-01: [编译错误] {错误描述} - {文件位置}
+- [ ] TASK-FIX-C001-02: [编译警告] {警告描述} - {文件位置}
+```
+
+任务命名规则：
+- `TASK-FIX-C{序号}-XX`: 编译修复任务
+
 ## 注意
 - 必须同时有 code + test 才可执行
 - status = pass 才进入下一阶段
+- **编译失败时必须更新 coding_task.md 添加修复任务，而不是在 compile_result.json 中描述

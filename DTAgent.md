@@ -127,14 +127,34 @@ tools:
 4. 启动应用
 5. 按依赖顺序执行场景调用
 6. 记录结果到 dt_report.json
-7. 生成 `.complete` 信号
+7. **如果存在失败的测试用例**：
+   - 读取当前的 coding_task.md
+   - **在 coding_task.md 中添加修复任务**（TASK-FIX-Dxxx 格式）
+   - 每个失败的场景对应一个修复任务
+8. 生成 `.complete` 信号
+9. **Manager 检测到 coding_task.md 有新任务后，会触发 CodingAgent 执行修复**
 
 ## 上下游
 - 上游：CompileAgent + ReviewingAgent（触发）
 - 下游：GardeningAgent
 
+## DT 失败处理
+
+当 DT 测试失败时，**不直接通知 CodingAgent**，而是：
+
+1. **在 coding_task.md 中添加修复任务**：
+```markdown
+## DT修复任务
+- [ ] TASK-FIX-D001-01: [DT失败] {场景ID} - {API路径} - {失败原因} - 期望: {期望结果} - 实际: {实际结果}
+```
+
+2. 任务命名规则：
+   - `TASK-FIX-D{序号}-XX`: DT 失败导致的修复任务
+
+3. **Manager 检测到 coding_task.md 有新任务后，会触发 CodingAgent 执行**
+
 ## 注意
 - 用例设计来源于 feature，每个 feature 至少一个正向 + 若干负向
 - 场景必须精确：API路径 + 请求体 + 期望响应
 - pass_rate = 100% 才进入下一阶段
-- 失败则回退 Coding
+- **DT 失败时必须在 coding_task.md 中添加修复任务，由 Manager 统一调度 CodingAgent**

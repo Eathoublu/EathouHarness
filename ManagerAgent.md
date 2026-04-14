@@ -156,6 +156,46 @@ tools:
 
 ---
 
+### 回退机制（判定未完成）
+> 核心原则参考「核心行为准则」第 3 点「禁止中途退出原则」
+
+**判定流程**:
+1. Manager 检测到 .complete 信号
+2. 按上表验证产出物
+3. 若验证通过 → .complete 写入 "approve: {timestamp}"
+4. 若验证不通过:
+   - 删除 .complete
+   - 记录 retry + 1
+   - 状态回退:
+     * current_state = 回退阶段
+     * agents_status.{阶段}.status = "pending"
+     * agents_status.{回退阶段}.status = "running"
+   - **在 coding_task.md 添加修复任务**（如果是代码问题）
+   - 重新触发对应 Agent
+   - 重试次数超过上限 → 人工介入
+
+**回退状态更新示例（Reviewing 阶段失败）**:
+
+```
+场景: Reviewing 阶段发现代码问题
+
+1. ReviewingAgent 完成审查 → 在 coding_task.md 添加修复任务（TASK-FIX-Rxxx）
+2. 验证不通过 → 删除 06_reviewing/.complete
+3. 状态回退:
+   artifacts/.state:
+   {
+     "current_state": "CODING",
+     "agents_status": {
+       "reviewing": {"status": "pending"},
+       "coding": {"status": "running"}
+     }
+   }
+4. Manager 重新触发 CodingAgent: "完成 coding_task.md 中的修复任务"
+5. CodingAgent 修复完成后 → 重新触发 Compile → Reviewing
+```
+
+---
+
 ### 各阶段调用方式
 | 阶段 | Subagent | 触发方式 | 输入产物 |
 |------|---------|---------|---------|----------|
@@ -243,29 +283,21 @@ def wait_for_complete(phase: str, timeout: int = 3600) -> bool:
 
 ### Reviewing 审查标准
 审查要点：
-- **严重**：影响代码运行逻辑、健壮性的硬性问题，必须清零
-- **提示**：代码风格、注释等建议性内容
-- **一般**：介于严重和提示之间
+- **严重**：影响代码运行逻辑、健壮性的硬性问题，必须清零（必须添加修复任务到 coding_task.md）
+- **一般**：代码规范、可改进处（建议添加修复任务到 coding_task.md）
+- **提示**：代码风格、注释等建议性内容（可选添加任务到 coding_task.md）
 
-issue.json 格式：
-```json
-{
-  "review_report": {
-    "status": "pass",
-    "severe_count": 0,
-    "normal_count": 2,
-    "info_count": 5
-  },
-  "issues": [
-    {
-      "type": "severe",
-      "description": "内存泄漏：第 45 行未释放资源",
-      "location": "src/main.go:45"
-    }
-  ]
-}
+coding_task.md 修复任务格式：
+```markdown
+## 审查修复任务
+- [ ] TASK-FIX-R001-01: [严重] 修复内存泄漏 - src/main.go:45 未释放资源
+- [ ] TASK-FIX-R001-02: [一般] 优化错误处理逻辑 - src/handler/order.go
+- [ ] TASK-FIX-R001-03: [提示] 添加函数注释 - src/utils/helper.go
 ```
-- status = pass 当且仅当 severe_count == 0
+
+**通过标准**: coding_task.md 中所有任务（包括本次添加的修复任务）都已完成（即没有 `[ ]` 未完成任务）
+- 如果审查后 coding_task.md 还有未完成的修复任务，则本次审查不通过
+- ReviewingAgent 不得生成 issue.json，所有问题必须通过 coding_task.md 管理
 
 ### Compile 产出规范
 compile_result.json 必须包含：
@@ -468,7 +500,7 @@ artifacts/artifact-{demand}-{YYYY-mm-dd}/
 │   └── compile_result.json
 ├── 06_reviewing/
 │   ├── review_report.json
-│   └── issue.json
+│   └── coding_task.md (添加审查修复任务)
 ├── 07_dt/
 │   └── dt_report.json
 └── 08_gardening/
