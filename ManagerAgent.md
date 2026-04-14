@@ -9,6 +9,7 @@ tools:
   glob: true
   grep: true
   read: true
+  question: true
 ---
 
 # Manager Agent
