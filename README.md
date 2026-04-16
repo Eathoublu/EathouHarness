@@ -8,11 +8,11 @@
 
 ### 核心变更
 
-1. **ManagerAgent**: 强化编排逻辑，增加全局上下文管理
-2. **CompileAgent**: 完善编译任务处理，支持详细报告生成
-3. **DTAgent**: 增强部署测试能力，支持错误诊断
-4. **ReviewingAgent**: 优化代码审查流程，支持多种严重级别问题分类
-5. **TestAgent**: 改进测试生成逻辑，支持上下文感知
+1. **ManagerAgent**: 强化编排逻辑，增加全局上下文管理、用户交互机制和脚本管理机制
+2. **CodingAgent**: 唯一代码实现入口，统一处理 TASK-C-*（初始开发）和 TASK-FIX-*（修复任务）
+3. **CompileAgent**: 完善编译任务处理，支持详细日志记录、失败诊断和 scripts 目录治理
+4. **ReviewingAgent**: 优化代码审查流程，通过 coding_task.md 管理所有修复任务
+5. **整体**: 优化各 Agent 职责边界，增强工作流的健壮性
 
 ---
 
@@ -25,10 +25,10 @@
 - **Manager**：编排中枢，调度所有 Agent，管理全局上下文
 - **Initial**：初始化，扫描生成全局基础文件（API列表、数据模型、架构文档）
 - **Analyze**：需求分析，拆解为 feature → 精确task
-- **Coding**：按 task 实现代码
-- **Test**：按 task 编写测试
-- **Compile**：编译 + 测试
-- **Review**：代码审查（严重问题必须清零）
+- **Coding**：唯一代码实现入口，处理 TASK-C-*（初始开发）和 TASK-FIX-*（修复任务）
+- **Test**：按 task 编写测试用例
+- **Compile**：编译 + 测试，记录详细日志，治理 scripts 目录
+- **Review**：代码审查（严重问题任务通过 coding_task.md 管理）
 - **DT**：启动应用，验证 API 功能
 - **Gardening**：归档整理，更新全局文件
 
@@ -115,10 +115,10 @@ artifacts/
 |------|------|
 | Initial | api_list.yaml + data_model.yaml + architecture.md 存在 |
 | Analyze | feature_list.json + coding_task.md + test_task.md |
-| Coding | coding_task.md 中所有 `[ ]` → `[x]` |
+| Coding | coding_task.md 中所有 TASK-C-* 和 TASK-FIX-* 完成（`[ ]` → `[x]`）|
 | Test | test_task.md 中所有 `[ ]` → `[x]` |
 | Compile | status = pass |
-| Review | issue.json 中 severe_count = 0 |
+| Review | coding_task.md 中所有任务完成且无新增修复任务 |
 | DT | pass_rate = 100% |
 | Gardening | final_report.md + changelog.json |
 
@@ -184,19 +184,27 @@ artifacts/
 
 见同名 .md 文件：
 
-- `ManagerAgent.md` - 编排定义（已更新：强化上下文管理和错误处理）
+- `ManagerAgent.md` - 编排定义（已更新：强化上下文管理、错误处理、用户交互和脚本管理）
 - `InitialAgent.md` - 初始化定义
 - `AnalyzeAgent.md` - 需求分析定义
-- `CodingAgent.md` - 编码定义
-- `TestAgent.md` - 测试定义（已更新：增强测试生成和上下文感知）
-- `CompileAgent.md` - 编译定义（已更新：完善编译流程和报告）
-- `ReviewingAgent.md` - 审查定义（已更新：优化审查流程和分类）
-- `DTAgent.md` - 部署测试定义（已更新：增强测试和诊断能力）
+- `CodingAgent.md` - 编码定义（已更新：唯一代码实现入口，处理TASK-C-*和TASK-FIX-*）
+- `TestAgent.md` - 测试定义
+- `CompileAgent.md` - 编译定义（已更新：完善编译流程、日志记录、失败诊断和scripts目录治理）
+- `ReviewingAgent.md` - 审查定义（已更新：优化审查流程，通过coding_task.md管理修复任务）
+- `DTAgent.md` - 部署测试定义
 - `GardeningAgent.md` - 归档定义
 
 ---
 
 ## 更新日志
+
+### 2026-04-15
+
+- **ManagerAgent**: 完善用户交互机制（问答支持和打断处理）和脚本管理机制（scripts 目录治理）
+- **CodingAgent**: 明确为唯一代码实现入口，统一处理 TASK-C-* 和 TASK-FIX-* 任务
+- **CompileAgent**: 增强日志记录、失败诊断功能，完善 scripts 目录治理
+- **ReviewingAgent**: 优化任务管理方式，所有审查问题通过 coding_task.md 统一管理
+- **整体**: 更新完成标准，优化各 Agent 职责边界，消除重复内容
 
 ### 2026-04-14
 
@@ -209,4 +217,4 @@ artifacts/
 
 ---
 
-*最后更新: 2026-04-14*
+*最后更新: 2026-04-15*
