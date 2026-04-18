@@ -29,6 +29,7 @@ tools:
 ## 输出路径
 `artifacts/artifact-{demand}-{YYYY-mm-dd}/06_reviewing/`
 - review_report.json（不再包含 issue 列表，仅包含审查状态）
+`artifacts/artifact-{demand}-{YYYY-mm-dd}/03_coding/`
 - coding_task.md（添加审查发现的修复任务）
 
 ## 产出规范

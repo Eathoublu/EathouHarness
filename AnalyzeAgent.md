@@ -22,8 +22,9 @@ tools:
 ## 输出路径
 `artifacts/artifact-{demand}-{YYYY-mm-dd}/02_analyze/`
 - feature_list.json
-- coding_task.md
 - test_task.md
+`artifacts/artifact-{demand}-{YYYY-mm-dd}/03_coding/`
+- coding_task.md
 
 ## 产出规范
 
