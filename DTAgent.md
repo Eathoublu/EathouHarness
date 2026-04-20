@@ -128,8 +128,8 @@ tools:
 5. 按依赖顺序执行场景调用
 6. 记录结果到 dt_report.json
 7. **如果存在失败的测试用例**：
-   - 读取当前的 coding_task.md
-   - **在 coding_task.md 中添加修复任务**（TASK-FIX-Dxxx 格式）
+   - 读取当前的 03_coding/coding_task.md
+   - **在 03_coding/coding_task.md 中添加修复任务**（TASK-FIX-Dxxx 格式）
    - 每个失败的场景对应一个修复任务
 8. 生成 `.complete` 信号
 9. **Manager 检测到 coding_task.md 有新任务后，会触发 CodingAgent 执行修复**

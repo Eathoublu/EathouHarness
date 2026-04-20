@@ -58,7 +58,7 @@ tools:
 
 当测试失败需要代码修复时，**不直接通知 CodingAgent**，而是：
 
-1. **在 coding_task.md 中添加修复任务**：
+1. **在 03_coding/coding_task.md 中添加修复任务**：
 ```markdown
 ## 测试修复任务
 - [ ] TASK-FIX-T001-01: [测试失败] {失败描述} - {测试位置} - {期望行为} - {实际行为}
