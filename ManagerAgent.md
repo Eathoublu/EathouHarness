@@ -581,6 +581,10 @@ artifacts/artifact-{demand}-{YYYY-mm-dd}/
 | 资源耗尽 | 磁盘/内存不足 | 清理历史 artifact，保留关键文件 |
 | 并发冲突 | 多 Agent 同时写文件 | 文件锁机制，串行化访问 |
 | 模型幻觉 | 输出格式不符合 schema | 重试 + 提示词强化 |
+| **阶段熔断** | **失败次数 >= 阈值** | **降级推进 / 强制跳过 / 人工介入** |
+| **阶段超时** | **执行时间 > 配置阈值** | **强制转移，记录警告** |
+| **重试耗尽** | **retry_count >= max_retries** | **熔断器打开，执行强制转移** |
+| **循环回退** | **同一阶段回退 > 3 次** | **检测循环，强制打破** |
 
 ## 配置参数
 ```yaml
@@ -597,6 +601,35 @@ manager:
     analyze: 45min
     coding: 2h
     test: 30min
+    compile: 15min
+    reviewing: 30min
+    dt: 30min
+    gardening: 15min
+
+  # 熔断器配置
+  circuit_breaker:
+    enabled: true
+    thresholds:
+      coding: 5
+      test: 5
+      compile: 8
+      reviewing: 8
+      dt: 10
+    on_open:
+      strategy: "degrade"  # degrade, force_skip, abort, manual_review
+    half_open:
+      max_attempts: 2
+      timeout: "5m"
+    recovery_timeout: "10m"
+
+  # 强制转移配置
+  force_transfer:
+    on_timeout:
+      strategy: "degrade"
+    on_circuit_open:
+      strategy: "degrade"
+    on_retry_exhausted:
+      strategy: "degrade"
     compile: 15min
     reviewing: 30min
     dt: 30min
@@ -1073,7 +1106,216 @@ ManagerAgent 进入等待状态：
 
 ---
 
+## 熔断器与强制状态转移机制
+
+> 解决无限回退循环、阶段卡死问题
+
+### 背景
+
+当 Compile/Review/DT 阶段反复失败时，传统的"失败-回退-重试"机制会形成无限循环：
+
+```
+COMPILE失败 → 回退到CODING修复 → 重新COMPILE → 仍然失败 → 再次回退...
+```
+
+熔断器（Circuit Breaker）和强制状态转移机制用于打破这种死锁。
+
+### 熔断器三种状态
+
+| 状态 | 含义 | 行为 |
+|------|------|------|
+| **CLOSED** | 关闭（正常） | 正常执行，记录失败次数 |
+| **OPEN** | 打开（熔断） | 跳过执行，执行强制转移策略 |
+| **HALF_OPEN** | 半开（试探） | 允许有限次尝试，成功后恢复 |
+
+### 熔断器状态流转
+
+```
+┌─────────┐    失败 < 阈值      ┌─────────┐
+│  CLOSED │ ◄──────────────── │  OPEN   │
+│ (正常)  │                   │ (熔断)  │
+└────┬────┘                   └────┬────┘
+     │                             │
+     │ 失败 >= 阈值                  │ 超时
+     ▼                             ▼
+┌─────────┐    成功      ┌─────────┐
+│HALF_OPEN│ ───────────► │  CLOSED │
+│ (试探)  │              │ (正常)  │
+└─────────┘              └─────────┘
+```
+
+### .state 中的熔断器记录
+
+```json
+{
+  "circuit_breakers": {
+    "compile": {
+      "state": "CLOSED",
+      "failure_count": 3,
+      "last_failure_at": "2024-01-15T10:30:00Z",
+      "opened_at": null,
+      "half_open_attempts": 0
+    },
+    "reviewing": {
+      "state": "OPEN",
+      "failure_count": 8,
+      "last_failure_at": "2024-01-15T10:45:00Z",
+      "opened_at": "2024-01-15T10:45:00Z"
+    }
+  }
+}
+```
+
+### 强制转移触发条件
+
+1. **重试次数达到阈值**：`retry_count >= max_retries`
+2. **熔断器打开**：`circuit_breaker.state == "OPEN"`
+3. **阶段执行超时**：`elapsed_time > phase_timeout`
+4. **检测到循环**：同一阶段回退超过3次
+
+### 强制转移策略
+
+#### 策略1：降级推进（Degrade & Continue）
+
+降低验收标准后继续推进：
+
+| 阶段 | 正常标准 | Level 1 | Level 2 | Level 3(熔断) |
+|------|----------|---------|---------|---------------|
+| Compile | 0 error, 0 warning | 0 error | 可运行 | 人工确认 |
+| Review | 严重=0, 一般=0 | 严重=0, 一般<=3 | 严重=0 | 人工确认 |
+| DT | pass_rate=100% | >=95% | >=80% | 人工确认 |
+
+#### 策略2：强制跳过（Force Skip）
+
+跳过当前阶段，进入下一阶段（记录警告）。
+
+#### 策略3：人工介入（Manual Review）
+
+暂停流程，等待用户决策：
+- "继续并强制通过" - 标记完成并继续
+- "继续并重试" - 重置熔断器后重试
+- "终止流程" - 标记FAILED并结束
+- "回退到XX阶段" - 回退到指定阶段
+
+#### 策略4：终止（Abort）
+
+标记FAILED，生成失败报告，结束流程。
+
+### ManagerAgent 集成实现
+
+#### 1. Agent调用前检查
+
+```python
+def call_agent_with_protection(phase: str, demand_dir: str):
+    """带熔断器和强制转移保护的Agent调用"""
+    
+    # 检查熔断器状态
+    cb_state = get_circuit_breaker_state(phase)
+    
+    if cb_state == "OPEN":
+        if can_attempt_half_open(phase):
+            update_circuit_state(phase, "HALF_OPEN")
+        else:
+            return execute_force_transfer(phase, demand_dir, "circuit_breaker_open")
+    
+    # 检查是否超时
+    if is_phase_timeout(phase, demand_dir):
+        return execute_force_transfer(phase, demand_dir, "timeout")
+    
+    # 正常调用Agent
+    return call_subagent(phase, demand_dir)
+```
+
+#### 2. 失败处理集成
+
+```python
+def handle_phase_failure(phase: str, demand_dir: str):
+    """处理阶段失败（集成熔断器）"""
+    
+    # 增加失败计数
+    retry_count = increment_retry_counter(phase)
+    increment_circuit_failure(phase)
+    
+    # 检查熔断器
+    if get_circuit_breaker_state(phase) == "OPEN":
+        return execute_force_transfer(phase, demand_dir, "circuit_breaker_open")
+    
+    # 检查是否达到最大重试
+    if retry_count >= get_max_retries(phase):
+        open_circuit_breaker(phase)
+        return execute_force_transfer(phase, demand_dir, "retry_exhausted")
+    
+    # 检查循环回退
+    if detect_loop_cycle(phase, demand_dir):
+        return execute_force_transfer(phase, demand_dir, "cycle_detected")
+    
+    # 原逻辑：回退到修复阶段
+    return rollback_to_fixing(phase, demand_dir)
+```
+
+#### 3. 强制转移执行
+
+```python
+def execute_force_transfer(phase: str, demand_dir: str, reason: str):
+    """执行状态强制转移"""
+    
+    strategy = config.force_transfer.on_circuit_open.strategy
+    
+    if strategy == "degrade":
+        return execute_degraded_transfer(phase, demand_dir, reason)
+    elif strategy == "skip":
+        return execute_skip_transfer(phase, demand_dir, reason)
+    elif strategy == "manual_review":
+        return execute_manual_review_transfer(phase, demand_dir, reason)
+    elif strategy == "abort":
+        return execute_abort_transfer(phase, demand_dir, reason)
+```
+
+### 强制转移报告
+
+每次强制转移生成报告：
+
+```markdown
+# 状态强制转移报告
+
+## 转移信息
+- 时间: 2024-01-15 11:00:00
+- 从: COMPILE
+- 到: REVIEWING
+- 原因: circuit_breaker_open
+- 策略: degrade
+
+## 降级详情
+- 原标准: 0 error, 0 warning
+- 降级后: 可运行即可 (Level 2)
+
+## 建议
+1. 项目完成后清理编译警告
+2. 完善环境依赖文档
+```
+
+### 可视化输出
+
+ManagerAgent 状态输出包含熔断器状态：
+
+```
+【熔断器状态】
+┌──────────┬─────────┬──────────────┬────────────────┐
+│ 阶段      │ 状态     │ 失败次数      │ 最后失败时间     │
+├──────────┼─────────┼──────────────┼────────────────┤
+│ Coding   │ CLOSED  │ 0/5          │ -              │
+│ Compile  │ OPEN    │ 8/8 ⚠️       │ 10:45 🔥       │
+│ Review   │ CLOSED  │ 2/8          │ 10:30          │
+└──────────┴─────────┴──────────────┴────────────────┘
+
+⚠️ Compile阶段已熔断，执行降级推进
+原标准：0 error, 0 warning → 降级后：可运行即可
+```
+
+---
+
 ## 启动与终止
 - **启动**: 用户输入需求 → Manager Agent 检查三个基础文件 → 如缺失则触发 Initial
 - **正常终止**: 所有 Sprint 完成 → DT 通过 → 生成 final_report.md
 - **异常终止**: 重试耗尽 → 记录失败状态 → 通知人工 → 保留现场供调试
+- **熔断终止**: 熔断器打开 → 执行强制转移策略 → 降级推进 / 人工介入 / 终止
